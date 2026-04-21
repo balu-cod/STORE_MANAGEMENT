@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Issue Item</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ... (EXISTING STYLES) ... */
+    .app-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; pointer-events: none; opacity: 0.15; width: 85%; max-width: 550px; }
+    .main-content { position: relative; z-index: 1; }
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --danger: #da1e28; --success: #198038; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 90px; margin: 0; font-family: 'Inter', sans-serif; }
+    .mobile-header { background: var(--white); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 1000; }
+    .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+    .main-content { padding: 24px; max-width: 600px; margin: 0 auto; }
+    .card { background: var(--white); padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 24px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #6f6f6f; text-transform: uppercase; }
+    .input-group { position: relative; display: flex; align-items: center; margin-bottom: 16px; }
+    .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; background: #fff; }
+    .input-group input:focus { border-color: var(--primary); }
+    .input-group input[readonly] { background-color: #f4f4f4; color: #888; }
+    .stock-display { background: #eef4ff; border: 1px solid #cce0ff; color: #0043ce; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 20px; display: none; text-align: center; }
+    .stock-display.error { background: #fff0f0; border-color: #ffccd1; color: var(--danger); }
+    .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .recent-header { font-weight: 700; font-size: 16px; margin-bottom: 12px; color: #333; }
+    .recent-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .recent-table th, .recent-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+    .qty-minus { color: var(--danger); font-weight: 700; }
+    .btn-reuse { padding: 4px 8px; background: #eef4ff; color: var(--primary); border: 1px solid #cce0ff; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 10px; }
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: #888; text-decoration: none; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-fab { width: 56px; height: 56px; background: var(--primary); border-radius: 50%; position: absolute; top: -20px; display: flex; align-items: center; justify-content: center; color: white; border: 4px solid var(--bg); }
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 260px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: 0.3s; z-index: 1200; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .side-link { display: block; padding: 12px; margin-bottom: 5px; color: #555; border-radius: 8px; font-weight: 500; text-decoration: none; }
+    .side-link.active { background: #eff6ff; color: var(--primary); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1100; }
+    .overlay.active { display: block; }
+  </style>
+</head>
+<body onload="initIssue()">
+
+  <img src="1000019846.jpg" class="app-watermark" alt="Logo">
+
+  <header class="mobile-header"><div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div><div class="brand">Issue Item</div><div style="width:24px"></div></header>
+  <div class="overlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div style="font-size:22px; font-weight:700; color:var(--primary); margin-bottom:40px;">TRIMS</div>
+    <a href="dashboard.html" class="side-link">Dashboard</a>
+    <a href="inventory.html" class="side-link">Inventory</a>
+    <a href="entry.html" class="side-link">Stock Entry</a>
+    <a href="search.html" class="side-link">Search</a>
+    <a href="issue.html" class="side-link active">Issue Item</a>
+  </aside>
+
+  <div class="main-content">
+    <div class="card">
+      <form onsubmit="issueStock(event)">
+        
+        <label>Issue Date</label>
+        <div class="input-group">
+            <input type="date" id="txn_date" required>
+        </div>
+
+        <label>Bin Number</label>
+        <div class="input-group">
+            <input type="text" id="bin_number" placeholder="Enter Bin..." required 
+                   oninput="handleBinInput(this)" maxlength="5" style="text-transform:uppercase;">
+        </div>
+        
+        <label>Rack</label>
+        <div class="input-group">
+            <input type="text" id="rack" placeholder="Auto-fills from Bin" readonly>
+        </div>
+
+        <label>Material Code</label>
+        <div class="input-group">
+            <input type="text" id="code" placeholder="Enter Code..." required 
+                   oninput="checkAvailability()" style="text-transform:uppercase;">
+        </div>
+
+        <div id="stockStatus" class="stock-display">Checking availability...</div>
+
+        <label>Quantity to Issue</label>
+        <div class="input-group">
+            <input type="number" id="qty" placeholder="0" required disabled oninput="validateQty()">
+        </div>
+
+        <label>Issued By</label>
+        <div class="input-group">
+            <select id="user" required>
+                <option value="" disabled selected>Select Employee...</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn" disabled>Confirm Issue</button>
+      </form>
+    </div>
+
+    <div class="recent-header">Recent Activity in this Bin</div>
+    <div class="card" style="padding:0; overflow:hidden;">
+        <table class="recent-table">
+            <thead><tr><th>Bin</th><th>Code</th><th>Qty</th><th>Action</th></tr></thead>
+            <tbody id="issueBody"><tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Enter Bin Number to see history</td></tr></tbody>
+        </table>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <div style="position:relative; width:100%; display:flex; justify-content:center;"><a href="entry.html" class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></a></div>
+    <a href="issue.html" class="nav-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="search.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Search</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+    
+    let inventoryData = [];
+    let availableStock = 0;
+
+    async function initIssue() {
+        // --- SET DEFAULT DATE TO TODAY ---
+        document.getElementById('txn_date').valueAsDate = new Date();
+
+        await loadEmployees(); 
+        
+        try {
+            const res = await fetch('api.php?action=get_inventory');
+            inventoryData = await res.json();
+        } catch(e) { console.error("Data load failed"); }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const binParam = urlParams.get('bin') || urlParams.get('loc'); 
+        const codeParam = urlParams.get('code');
+
+        if(binParam) {
+            const binInput = document.getElementById('bin_number');
+            binInput.value = binParam;
+            handleBinInput(binInput); 
+        }
+        if(codeParam) {
+            document.getElementById('code').value = codeParam;
+            setTimeout(checkAvailability, 500);
+        }
+    }
+
+    async function loadEmployees() {
+        try {
+            const res = await fetch('api.php?action=get_transactions');
+            const data = await res.json();
+            const users = new Set();
+            data.forEach(log => { if (log.user) users.add(log.user.trim()); });
+            const select = document.getElementById('user');
+            Array.from(users).sort().forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                select.appendChild(option);
+            });
+        } catch(e) { console.error("Failed to load employees"); }
+    }
+
+    function handleBinInput(input) {
+        let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        input.value = val;
+        if (val.length >= 2) { document.getElementById('rack').value = val.substring(0, 2); } 
+        else { document.getElementById('rack').value = ""; }
+        if (val.length >= 4) { loadRecentIssues(val); checkAvailability(); }
+    }
+
+    function reuseData(loc, code) {
+        document.getElementById('bin_number').value = loc;
+        document.getElementById('code').value = code;
+        handleBinInput(document.getElementById('bin_number'));
+        setTimeout(checkAvailability, 200);
+    }
+
+    function checkAvailability() {
+        const bin = document.getElementById('bin_number').value;
+        const code = document.getElementById('code').value.toUpperCase();
+        const statusBox = document.getElementById('stockStatus');
+        const qtyInput = document.getElementById('qty');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if(bin.length < 4 || code.length < 1) { statusBox.style.display = 'none'; return; }
+
+        const item = inventoryData.find(i => i.code === code && i.loc && i.loc.toUpperCase().replace('-','') === bin.toUpperCase());
+        statusBox.style.display = 'block';
+        if (item) {
+            availableStock = parseInt(item.qty);
+            statusBox.innerHTML = `✅ Found! Available: <b>${availableStock}</b>`;
+            statusBox.className = "stock-display"; 
+            qtyInput.disabled = false;
+        } else {
+            availableStock = 0;
+            statusBox.innerHTML = `❌ Not found in this Bin`;
+            statusBox.className = "stock-display error"; 
+            qtyInput.disabled = true;
+            submitBtn.disabled = true;
+        }
+    }
+
+    function validateQty() {
+        const qty = parseInt(document.getElementById('qty').value) || 0;
+        const submitBtn = document.getElementById('submitBtn');
+        const statusBox = document.getElementById('stockStatus');
+        if (qty > availableStock) {
+            statusBox.innerHTML = `⚠️ Error: Only <b>${availableStock}</b> available!`;
+            statusBox.className = "stock-display error";
+            submitBtn.disabled = true;
+        } else if (qty > 0) {
+            statusBox.innerHTML = `✅ Valid. Available: <b>${availableStock}</b>`;
+            statusBox.className = "stock-display";
+            submitBtn.disabled = false;
+        } else { submitBtn.disabled = true; }
+    }
+
+    async function loadRecentIssues(filterLoc = "") {
+        try {
+            const res = await fetch('api.php?action=get_transactions');
+            const data = await res.json();
+            const issues = data.filter(i => i.action_type === 'Issue' && i.loc && i.loc.toUpperCase().replace('-','') === filterLoc.toUpperCase()).slice(0, 5);
+            const tbody = document.getElementById('issueBody');
+            tbody.innerHTML = "";
+            if (issues.length === 0) { tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px;'>No recent issues in this bin</td></tr>"; return; }
+            issues.forEach(item => { 
+                tbody.innerHTML += `
+                <tr>
+                    <td><b>${item.loc}</b></td>
+                    <td>${item.item_code}</td>
+                    <td class="qty-minus">-${item.txn_qty}</td>
+                    <td><button class="btn-reuse" onclick="reuseData('${item.loc}', '${item.item_code}')">Reuse</button></td>
+                </tr>`; 
+            });
+        } catch(e) {}
+    }
+
+    async function issueStock(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = "Processing..."; btn.disabled = true;
+        
+        const payload = { 
+            action: 'issue', 
+            date: document.getElementById('txn_date').value, // SEND DATE
+            code: document.getElementById('code').value, 
+            qty: document.getElementById('qty').value, 
+            loc: document.getElementById('bin_number').value, 
+            user: document.getElementById('user').value 
+        };
+        
+        try {
+            const res = await fetch('api.php', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const result = await res.json();
+            if(result.status === 'success') { alert("✅ Issued Successfully"); location.reload(); }
+            else { alert("Error: " + result.message); btn.innerText = "Confirm Issue"; btn.disabled = false; }
+        } catch(e) { alert("Error"); }
+    }
+  </script>
+</body>
+</html>

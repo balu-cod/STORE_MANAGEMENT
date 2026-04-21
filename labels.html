@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trims | QR Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{ --primary:#0f62fe; --bg:#f4f7fc; --border:#e0e0e0; }
+*{ box-sizing:border-box; }
+body{ margin:0; background:var(--bg); font-family:Inter,sans-serif; }
+.main{ max-width:1200px; margin:auto; padding:24px; }
+
+/* CARD STYLES */
+.card{ background:white; padding:24px; border-radius:14px; border:1px solid var(--border); margin-bottom:28px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.card-header { font-size:18px; font-weight:800; margin-bottom:16px; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px; }
+
+/* INPUT GRID */
+.input-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; align-items:end; }
+label{ font-size:12px; font-weight:800; text-transform:uppercase; margin-bottom:6px; display:block; color:#555; }
+input,select{ width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); font-size:14px; }
+input:focus, select:focus{ border-color: var(--primary); outline: none; }
+
+/* BUTTONS */
+button{ height:46px; border:none; border-radius:10px; font-weight:800; cursor:pointer; color:white; transition:0.2s; width:100%; }
+.gen{ background:var(--primary); }
+.gen:hover{ background:#0043ce; }
+.print{ background:#198038; }
+.print:hover{ background:#10642a; }
+
+/* QR GRID - BIG STYLE */
+.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:24px; justify-items:center; margin-top:20px; }
+
+.qr{ 
+    width: 280px;
+    height: 360px;
+    background: white; 
+    border: 4px solid #000; /* THICK BORDER */
+    border-radius: 16px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px; 
+    gap: 15px; 
+    page-break-inside: avoid; 
+}
+
+.qr-title{ font-size: 26px; font-weight: 900; letter-spacing: 0.5px; text-align: center; color: #000; word-break: break-all; line-height: 1.2; }
+.qr canvas{ width: 220px !important; height: 220px !important; }
+.qr-sub { font-size: 13px; color: #000; text-transform: uppercase; font-weight: 700; margin-top: -5px; }
+
+/* PRINT MODE */
+@media print{ 
+    .card,button{ display:none!important; } 
+    body{ background:white; } 
+    .grid{ grid-template-columns:repeat(3,1fr); gap:10px; } 
+    .qr{ border: 4px solid #000; box-shadow:none; margin: 10px; } 
+}
+</style>
+</head>
+<body>
+
+<div class="main">
+  
+  <div class="card">
+    <div class="card-header">1. Generate Labels</div>
+    <div class="input-grid">
+      <div>
+        <label>Router File Link</label>
+        <input type="text" id="baseUrl" value="https://trimsintern.infinityfree.me/scan.html">
+      </div>
+      <div>
+        <label>QR Level</label>
+        <select id="mode">
+          <option value="rack">Rack (Series Level)</option>
+          <option value="bin">Bin (Rack Level)</option>
+          <option value="box">Box (Item Level)</option>
+        </select>
+      </div>
+      <div><label>Series Letter</label><input id="letter" value="A" oninput="this.value=this.value.toUpperCase()"></div>
+      <div><label>Total Boxes</label><input id="totalBins" type="number" value="168" min="1"></div>
+      
+      <button class="gen" onclick="generate()">Generate QR</button>
+      <button class="print" onclick="window.print()">Print Labels</button>
+    </div>
+  </div>
+
+  <div class="grid" id="out"></div>
+</div>
+
+<script>
+const BOXES_PER_BIN = 12;
+
+function generate(){
+  const out = document.getElementById("out");
+  out.innerHTML = "";
+  
+  const baseUrl = document.getElementById("baseUrl").value.trim();
+  const mode = document.getElementById("mode").value;
+  const letter = document.getElementById("letter").value;
+  const totalBoxes = parseInt(document.getElementById("totalBins").value);
+
+  if(!baseUrl || !letter || isNaN(totalBoxes) || totalBoxes < 1){ 
+      alert("Check inputs"); return; 
+  }
+
+  const totalBins = Math.ceil(totalBoxes / BOXES_PER_BIN);
+
+  // --- 1. RACK LEVEL (Rack-A) ---
+  if(mode === "rack"){
+      const id = `Rack-${letter}`; 
+      const link = `${baseUrl}?id=${id}`;
+      createQR(`RACK ${letter}`, link, "FINISHING RACKS");
+  }
+
+  // --- 2. BIN LEVEL (Bin-A1) ---
+  if(mode === "bin"){
+    for(let r=1; r<=totalBins; r++){
+      const id = `Bin-${letter}${r}`; 
+      const link = `${baseUrl}?id=${id}`;
+      
+      const start = (r-1)*BOXES_PER_BIN + 1;
+      const end = Math.min(r*BOXES_PER_BIN, totalBoxes);
+      
+      createQR(`BIN ${letter}${r}`, link, `BOXES ${start}-${end}`);
+    }
+  }
+
+  // --- 3. BOX LEVEL (Box-A101) ---
+  if(mode === "box"){
+    for(let i=1; i<=totalBoxes; i++){
+      const binNo = Math.ceil(i/BOXES_PER_BIN);
+      const boxInBin = ((i-1)%BOXES_PER_BIN) + 1;
+      const suffix = boxInBin < 10 ? "0" + boxInBin : boxInBin;
+      
+      const id = `${letter}${binNo}${suffix}`; // e.g. Box-A101
+      const link = `${baseUrl}?id=${id}`;
+      
+      createQR(` ${letter}${binNo}${suffix}`, link);
+    }
+  }
+}
+
+function createQR(title, link, sub){
+  const out = document.getElementById("out");
+  const card = document.createElement("div");
+  card.className = "qr";
+  
+  const titleEl = document.createElement("div");
+  titleEl.className = "qr-title";
+  titleEl.textContent = title;
+  
+  const subEl = document.createElement("div");
+  subEl.className = "qr-sub";
+  subEl.textContent = sub;
+  
+  const qrBox = document.createElement("div");
+  new QRCode(qrBox, { text: link, width: 220, height: 220, correctLevel : QRCode.CorrectLevel.H });
+
+  card.append(titleEl, subEl, qrBox);
+  out.appendChild(card);
+}
+
+window.onload = generate;
+</script>
+</body>
+</html>

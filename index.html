@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+   body {
+    /* 1. Set the image */
+    background-image: url('your-image.jpg');
+
+    /* 2. Scale image to cover the entire area */
+    background-size: cover;
+
+    /* 3. Center the image */
+    background-position: center;
+
+    /* 4. Do not repeat the image */
+    background-repeat: no-repeat;
+
+    /* 5. Ensure the body takes at least the full height of the screen */
+    min-height: 100vh;
+    
+    /* 6. Remove default margin so there are no white gaps */
+    margin: 0;
+    
+    /* Optional: Fix the background so it doesn't scroll with content */
+    background-attachment: fixed;
+}
+      /* PROFESSIONAL THEME */
+    :root { 
+        --primary: #0f62fe; 
+        --bg: #f4f7fc; 
+        --white: #fff; 
+        --text: #161616; 
+        --border: #e0e0e0; 
+        --danger: #da1e28;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
+    
+ /* --- ENHANCED WATERMARK STYLING --- */
+.app-watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    pointer-events: none; 
+    opacity: 0.5;
+    width: 85%;
+    max-width: 550px;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.main-content {
+    position: relative;
+    z-index: 1;
+}
+    .mobile-header { background: var(--white); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+    .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+
+    .main-content { padding: 24px; max-width: 600px; margin: 0 auto; }
+
+    /* OVERVIEW HEADER */
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { color: #666; font-size: 13px; }
+
+    /* DATE DISPLAY STYLES */
+    .date-display {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary);
+        background: rgba(15, 98, 254, 0.1); /* Light blue background */
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(15, 98, 254, 0.2);
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--white); padding: 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .stat-value { font-size: 24px; font-weight: 700; display: block; margin-bottom: 4px; }
+    .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+    /* BIG ACTION CARDS */
+    .action-card { 
+        background: var(--white); 
+        padding: 32px 24px; 
+        border-radius: 16px; 
+        border: 1px solid var(--border); 
+        text-align: center; 
+        display: block; 
+        text-decoration: none; 
+        color: inherit; 
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .action-card:active { transform: scale(0.98); }
+    
+    .icon-plus { font-size: 40px; color: var(--primary); margin-bottom: 8px; font-weight: 300; }
+    .icon-minus { font-size: 40px; color: var(--danger); margin-bottom: 8px; font-weight: 300; }
+    
+    .action-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .action-sub { font-size: 13px; color: #666; }
+
+    /* SEARCH BAR */
+    .search-bar-link {
+        background: var(--white);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: #888;
+        font-size: 14px;
+        margin-top: 24px;
+    }
+
+    /* SIDEBAR & NAV */
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 260px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: 0.3s; z-index: 1200; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar.active { transform: translateX(0); }
+    .side-link { display: block; padding: 12px; margin-bottom: 5px; color: #555; border-radius: 8px; font-weight: 500; text-decoration: none; }
+    .side-link.active { background: #edf5ff; color: var(--primary); font-weight: 600; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1100; }
+    .overlay.active { display: block; }
+
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; text-decoration: none; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-fab { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 4px solid var(--bg); position: relative; top: -15px; box-shadow: 0 4px 10px rgba(15,98,254,0.3); }
+  </style>
+</head>
+<body onload="initHome()">
+
+  <img src="bg.jpg" class="app-watermark" alt="Aditya Birla Group Logo">
+
+  <header class="mobile-header">
+    <div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div>
+    <div class="brand">Trims Inventory</div>
+    <div style="font-size:14px; border:1px solid #333; border-radius:4px; padding:2px 6px; font-weight:bold;">INTERNS C-23</div>
+  </header>
+  <div class="overlay" onclick="toggleMenu()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <button onclick="toggleMenu()" style="align-self:flex-end; background:none; border:none; font-size:24px;">✕</button>
+    <div style="margin-bottom:40px; font-weight:700; font-size:22px; color:var(--primary);">TRIMS</div>
+    <a href="index.html" class="side-link active">Home</a>
+    <a href="dashboard.html" class="side-link">Dashboard</a>
+    <a href="inventory.html" class="side-link">Inventory</a>
+    <a href="bincard.html" class="side-link">Bin Card</a>
+    <a href="entry.html" class="side-link">Stock Entry</a>
+    <a href="issue.html" class="side-link">Issue Item</a>
+  </aside>
+
+  <div class="main-content">
+    
+    <div class="header-row">
+        <div>
+            <div class="page-title">Overview</div>
+            <div class="page-subtitle">Manage your inventory levels</div>
+        </div>
+        <div id="currentDate" class="date-display">--/--/----</div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-value" id="batch-count">--</span>
+            <span class="stat-label">Stock Batches</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="total-qty">--</span>
+            <span class="stat-label">Total Stock</span>
+        </div>
+    </div>
+
+    <a href="entry.html" class="action-card">
+        <div class="icon-plus">+</div>
+        <div class="action-title">Stock Entry</div>
+        <div class="action-sub">Add new materials</div>
+    </a>
+
+    <a href="issue.html" class="action-card">
+        <div class="icon-minus">−</div>
+        <div class="action-title">Issue Item</div>
+        <div class="action-sub">Record material usage</div>
+    </a>
+
+    <a href="search.html" class="search-bar-link">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Tap to search material code...
+    </a>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <a href="entry.html"><div class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div></a>
+    <a href="issue.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="search.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Search</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+
+    async function initHome() {
+        // 1. SET CURRENT DATE
+        const dateElement = document.getElementById('currentDate');
+        const now = new Date();
+        const options = { weekday: 'short', day: 'numeric', month: 'short' }; // e.g., "Mon, 1 Jan"
+        dateElement.textContent = now.toLocaleDateString('en-GB', options);
+
+        // 2. LOAD STATS
+        try {
+            const res = await fetch('api.php?action=get_inventory');
+            const data = await res.json();
+            document.getElementById('batch-count').innerText = data.length;
+            const total = data.reduce((acc, item) => acc + parseInt(item.qty || 0), 0);
+            document.getElementById('total-qty').innerText = total;
+        } catch(e) {
+            document.getElementById('batch-count').innerText = "0";
+            document.getElementById('total-qty').innerText = "0";
+        }
+    }
+  </script>
+</body>
+</html>

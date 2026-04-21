@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Search & Manage</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* WATERMARK */
+    .app-watermark {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 40%; max-width: 400px; opacity: 0.06; z-index: 0; pointer-events: none;
+        filter: grayscale(100%);
+    }
+    .main-content { position: relative; z-index: 1; }
+
+    /* UNIVERSAL STYLES */
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --danger: #da1e28; --info: #0043ce; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 100px; margin: 0; font-family: 'Inter', sans-serif; }
+    
+    /* SIDEBAR & NAV */
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 280px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: transform 0.3s; z-index: 2000; box-shadow: 4px 0 24px rgba(0,0,0,0.1); display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding-left: 8px; }
+    .brand { font-weight: 800; font-size: 20px; color: var(--primary); letter-spacing: -0.5px; }
+    .menu-icon { font-size: 24px; cursor: pointer; color: #333; }
+    .side-link { display: flex; align-items: center; padding: 14px 16px; margin-bottom: 4px; color: #525252; border-radius: 8px; font-weight: 500; text-decoration: none; font-size: 15px; }
+    .side-link.active { background: #eff6ff; color: var(--primary); font-weight: 700; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1500; }
+    .overlay.active { display: block; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 72px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; text-decoration: none; color: #94a3b8; font-size: 10px; font-weight: 600; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-fab { width: 56px; height: 56px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; position: absolute; top: -28px; border: 4px solid var(--bg); }
+    
+    .mobile-header { background: var(--white); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; }
+    .main-content { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+    /* FILTERS */
+    .filters-wrapper { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
+    .filters-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex-grow: 1; }
+    select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); outline: none; }
+    
+    /* CLEAR BTN */
+    .clear-loc-btn { background: var(--danger); color: white; border: none; border-radius: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.5; pointer-events: none; }
+    .clear-loc-btn.active { opacity: 1; pointer-events: auto; }
+
+    /* SEARCH */
+    .search-wrapper { position: relative; margin-bottom: 24px; }
+    .search-input { width: 100%; padding: 14px 14px 14px 44px; border: 1px solid var(--border); border-radius: 12px; font-size: 15px; outline: none; }
+    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; opacity: 0.5; }
+
+    /* TABLE */
+    .results-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    th { text-align: left; padding: 14px; background: #f9f9f9; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    td { padding: 14px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+    
+    .act-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .act-Entry { background: #e6f7ff; color: #0043ce; }
+    .act-Issue { background: #fff1f1; color: #da1e28; }
+    
+    /* TEXT ACTION BUTTONS */
+    .action-group { display: flex; gap: 8px; justify-content: center; }
+    
+    .btn-action {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-transform: uppercase;
+        display: inline-block;
+        transition: 0.2s;
+    }
+    
+    .btn-view { background: #eef4ff; color: var(--info); border-color: #cce0ff; }
+    .btn-view:hover { background: var(--info); color: white; }
+
+    .btn-del { background: #fff0f0; color: var(--danger); border-color: #ffccd1; }
+    .btn-del:hover { background: var(--danger); color: white; }
+
+  </style>
+</head>
+<body onload="initSearch()">
+  
+  <header class="mobile-header">
+    <div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div>
+    <div class="brand">Search & Manage</div>
+    <div style="width:24px"></div>
+  </header>
+
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div style="margin-bottom:40px; padding-left:10px; font-weight:800; font-size:20px; color:var(--primary);">TRIMS</div>
+    <a href="index.html" class="side-link">Home</a>
+    <a href="dashboard.html" class="side-link">Dashboard</a>
+    <a href="inventory.html" class="side-link">Inventory</a>
+    <a href="search.html" class="side-link active">Search</a>
+    <a href="entry.html" class="side-link">Stock Entry</a>
+    <a href="issue.html" class="side-link">Issue Item</a>
+  </aside>
+
+  <div class="main-content">
+    
+    <div class="filters-wrapper">
+        <div class="filters-container">
+            <select id="rackFilter" onchange="handleRackChange()">
+                <option value="">Select Rack...</option>
+            </select>
+            <select id="binFilter" disabled onchange="filterData()">
+                <option value="">Select Bin...</option>
+            </select>
+        </div>
+        <button id="clearLocBtn" class="clear-loc-btn" onclick="clearLocationData()">🗑️</button>
+    </div>
+
+    <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Code or User..." onkeyup="filterData()">
+    </div>
+
+    <div class="results-card" style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Code</th>
+                    <th>Loc</th>
+                    <th>Qty</th>
+                    <th>User</th>
+                    <th style="text-align:center;">Manage</th>
+                </tr>
+            </thead>
+            <tbody id="results-body"><tr><td colspan="6" style="text-align:center; padding:30px;">Loading...</td></tr></tbody>
+        </table>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <div class="nav-fab-container"><a href="entry.html" class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></a></div>
+    <a href="issue.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="search.html" class="nav-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Search</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+    
+    let allLogs = [];
+
+    // --- 1. DYNAMIC AUTO-UPDATE LOGIC ---
+    async function initSearch() {
+        populateFilters();
+        await fetchData(); // Initial Fetch
+        
+        // Auto-refresh every 3 seconds to see new Entries/Issues instantly
+        setInterval(fetchData, 3000); 
+    }
+
+    async function fetchData() {
+        try {
+            const res = await fetch('api.php?action=get_transactions');
+            allLogs = await res.json();
+            filterData(); // Refresh UI while keeping search filters
+        } catch(e) { 
+            // Silent fail to avoid annoying popups during background refresh
+            console.error("Sync error"); 
+        }
+    }
+
+    function populateFilters() {
+        const rackSelect = document.getElementById('rackFilter');
+        const binSelect = document.getElementById('binFilter');
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        
+        alphabet.forEach(letter => {
+            rackSelect.add(new Option("Rack " + letter + "1", letter + "1"));
+            rackSelect.add(new Option("Rack " + letter + "2", letter + "2"));
+        });
+
+        for(let i=1; i<=96; i++) {
+            let num = i.toString().padStart(2, '0');
+            binSelect.add(new Option("Bin " + num, num));
+        }
+    }
+
+    function handleRackChange() {
+        const rackVal = document.getElementById('rackFilter').value;
+        const binSelect = document.getElementById('binFilter');
+        const clearBtn = document.getElementById('clearLocBtn');
+        
+        if (rackVal) { binSelect.disabled = false; } 
+        else { binSelect.disabled = true; binSelect.value = ""; clearBtn.classList.remove('active'); }
+        filterData();
+    }
+
+    function filterData() {
+        const textQuery = document.getElementById('searchInput').value.toUpperCase();
+        const rackFilter = document.getElementById('rackFilter').value.toUpperCase();
+        const binFilter = document.getElementById('binFilter').value;
+        
+        if(rackFilter && binFilter) document.getElementById('clearLocBtn').classList.add('active');
+        else document.getElementById('clearLocBtn').classList.remove('active');
+
+        const filtered = allLogs.filter(item => {
+            const code = (item.item_code || '').toUpperCase();
+            const user = (item.user || '').toUpperCase();
+            const loc = (item.loc || '').toUpperCase();
+
+            const matchesText = code.includes(textQuery) || user.includes(textQuery);
+            let matchesLoc = true;
+
+            if (rackFilter && !loc.includes(rackFilter)) matchesLoc = false;
+            if (binFilter && rackFilter && !loc.includes(binFilter)) matchesLoc = false;
+
+            return matchesText && matchesLoc;
+        });
+
+        renderTable(filtered);
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('results-body');
+        tbody.innerHTML = "";
+        
+        if(!data || data.length === 0) { tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:30px;'>No results</td></tr>"; return; }
+
+        data.forEach(item => {
+            let type = item.action_type || 'Unknown';
+            let code = item.item_code || '?';
+            
+            tbody.innerHTML += `
+            <tr>
+                <td><span class="act-badge act-${type}">${type}</span></td>
+                <td><b>${code}</b></td>
+                <td>${item.loc || '-'}</td>
+                <td style="font-weight:700;">${item.txn_qty}</td>
+                <td>${item.user || 'Admin'}</td>
+                <td>
+                    <div class="action-group">
+                        <button class="btn-action btn-view" onclick="viewBinCard('${code}')">View</button>
+                        <button class="btn-action btn-del" onclick="deleteLogEntry(${item.id})">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+
+    function viewBinCard(code) { window.location.href = `bincard.html?code=${encodeURIComponent(code)}`; }
+
+    async function deleteLogEntry(id) {
+        if(!confirm(`Delete this specific history log?`)) return;
+        const pin = prompt("Enter Admin PIN:");
+        if (pin !== "1234") { alert("Incorrect PIN"); return; }
+
+        try {
+            const res = await fetch('api.php', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_log', id: id }) // This calls 'delete_log' in api.php
+            });
+            const result = await res.json();
+            if (result.status === 'success') { alert("Deleted"); fetchData(); }
+            else { alert("Error: " + result.message); }
+        } catch(e) { alert("Server Error"); }
+    }
+
+    async function clearLocationData() {
+        const rack = document.getElementById('rackFilter').value;
+        const bin = document.getElementById('binFilter').value;
+        const loc = rack + "-" + bin;
+
+        if(!confirm(`Delete ALL ITEMS in ${loc}?`)) return;
+        const pin = prompt("Enter Admin PIN:");
+        if (pin !== "1234") return;
+
+        try {
+            const res = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clear_location', location: loc }) 
+            });
+            const result = await res.json();
+            if(result.status === 'success') { alert("Location Cleared"); fetchData(); }
+            else { alert("Error: " + result.message); }
+        } catch(e) { alert("Error"); }
+    }
+  </script>
+</body>
+</html>

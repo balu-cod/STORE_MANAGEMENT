@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Box Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --success: #198038; --danger: #da1e28; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 90px; margin: 0; font-family: 'Inter', sans-serif; }
+    .mobile-header { background: var(--white); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; }
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 260px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: 0.3s; z-index: 1200; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1100; }
+    .overlay.active { display: block; }
+    .main-content { padding: 16px; max-width: 900px; margin: 0 auto; }
+   .control-panel {
+    display: flex; align-items: center; gap: 6px; background: white; padding: 10px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; flex-wrap: nowrap; overflow: hidden;       
+}
+   .search-input { flex: 1; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; font-size: 13px; }
+   .btn-main { padding: 10px 12px; border-radius: 8px; font-weight: 700; color: white; border: none; cursor: pointer; white-space: nowrap; font-size: 12px; display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+    .btn-search { background: var(--primary); }
+    .location-bar { background: white; color: black; padding: 16px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+    .loc-title { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+    .card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th { text-align: left; padding: 12px; background: #f9f9f9; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+    .action-group { display: flex; gap: 8px; }
+    .btn-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 14px; transition: 0.2s; }
+    .btn-in { background: #e6f7ff; color: #0043ce; border: 1px solid #bce3ff; }
+    .btn-out { background: #fff1f1; color: #da1e28; border: 1px solid #ffd7d9; }
+    .fab-stack { position: fixed; bottom: 85px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1100; }
+    .fab-btn { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: none; cursor: pointer; }
+    .fab-entry { background: var(--success); } .fab-issue { background: var(--danger); }
+      @media (max-width: 400px) { .btn-main { padding: 8px 9px; font-size: 11px; } }
+  </style>
+</head>
+<body onload="initPage()">
+  <header class="mobile-header"><div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div><div style="font-weight:700; font-size:18px;">Box Monitor</div><div style="width:24px"></div></header>
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar"><div style="padding:20px; font-weight:800; font-size:20px; color:var(--primary);">TRIMS</div><a href="index.html" style="display:block; padding:10px;">Home</a></aside>
+
+  <div class="main-content">
+    <div class="control-panel">
+        <button class="btn-main btn-search" style="background:var(--danger);" onclick="authIssue()">- Issue</button>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Code..." onkeyup="filterTable()">
+        
+        <button id="btnClearBox" class="btn-main" style="background:#dc3545; display:none;" onclick="clearBoxData()">🗑️ Clear</button>
+        
+        <button class="btn-main btn-search" onclick="filterTable()">Search</button>
+        <a href="entry.html" class="btn-main btn-search" style="background:var(--success);">+ Entry</a>
+    </div>
+    <div class="location-bar"><div class="loc-title" id="pageTitle">BOX --</div></div>
+    <div class="card" style="overflow-x:auto;">
+        <table>
+            <thead><tr><th>Action</th><th>Code</th><th>Loc</th><th>Qty</th><th>Stock</th><th>User</th><th>Manage</th></tr></thead>
+            <tbody id="tableBody"><tr><td colspan="7" style="text-align:center; padding:20px;">Loading...</td></tr></tbody>
+        </table>
+    </div>
+  </div>
+
+  <div class="fab-stack">
+      <a href="entry.html" id="dynamicEntryLink" class="fab-btn fab-entry"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></a>
+      <button class="fab-btn fab-issue" onclick="authIssue()"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+  </div>
+  
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+    let boxFilter = "";
+    
+    // Original Auth Function
+    function authIssue() { if(prompt("Auth Code:")==="1234") window.location.href="issue.html?loc=" + boxFilter; else alert("Invalid Code"); }
+    
+    let allLogs = [], inventoryMap = {}; 
+
+    // Original Initialization
+    async function initPage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        boxFilter = (urlParams.get('code') || urlParams.get('id') || "").toUpperCase(); 
+        
+        if(boxFilter) { 
+            document.getElementById('pageTitle').innerText = "BOX " + boxFilter; 
+            document.getElementById('dynamicEntryLink').href = "entry.html?loc=" + boxFilter; 
+            document.getElementById('btnClearBox').style.display = 'inline-flex'; 
+        } else { 
+            document.getElementById('pageTitle').innerText = "BOX (Unknown)"; 
+        }
+
+        try {
+            const [resLog, resInv] = await Promise.all([
+                fetch('api.php?action=get_transactions&loc=' + encodeURIComponent(boxFilter)), 
+                fetch('api.php?action=get_inventory')
+            ]);
+            
+            allLogs = await resLog.json();
+            const invData = await resInv.json();
+            invData.forEach(i => { 
+                const safeCode = (i.code || "").toUpperCase();
+                const safeLoc = (i.loc || "").toUpperCase();
+                inventoryMap[`${safeCode}_${safeLoc}`] = i.qty; 
+            });
+            
+            filterTable();
+        } catch(e) { console.error(e); }
+    }
+
+    // NEW Feature: Clear Data
+    async function clearBoxData() {
+        if (!boxFilter) return;
+        
+        const confirmation = confirm(`⚠️ DANGER: Are you absolutely sure you want to permanently clear ALL inventory data for location ${boxFilter}? This action cannot be undone.`);
+        if (!confirmation) return;
+
+        const btn = document.getElementById('btnClearBox');
+        btn.innerText = "Clearing...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clear_location', loc: boxFilter, user: 'Admin' })
+            });
+            
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert(`Location ${boxFilter} has been cleared.`);
+                window.location.reload(); 
+            } else {
+                alert("Error: " + result.message);
+                btn.innerText = "🗑️ Clear";
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Network error while trying to clear data.");
+            btn.innerText = "🗑️ Clear";
+            btn.disabled = false;
+        }
+    }
+
+    // Original Filter Function
+    function filterTable() {
+        const query = document.getElementById('searchInput').value.toUpperCase();
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+        
+        const filtered = allLogs.filter(i => {
+            let loc = (i.loc || "").toUpperCase();
+            let itemCodeSafe = (i.item_code || "").toUpperCase();
+            return (loc === boxFilter) && (itemCodeSafe.includes(query));
+        });
+        
+        if(filtered.length === 0) { tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>No history</td></tr>"; return; }
+
+        filtered.forEach(item => {
+            let safeCode = (item.item_code || "").toUpperCase();
+            let safeLoc = (item.loc || "").toUpperCase();
+            
+            let currentStock = inventoryMap[`${safeCode}_${safeLoc}`] || "0";
+            let badge = item.action_type === 'Issue' ? '#ffebeb' : '#e6f7ff';
+            let badgeText = item.action_type === 'Issue' ? '#da1e28' : '#0043ce';
+            let qtyColor = item.action_type === 'Issue' ? 'red' : 'green';
+            let prefix = item.action_type === 'Issue' ? '-' : '+';
+
+            let buttons = `<div class="action-group">
+                <a href="entry.html?code=${item.item_code}&loc=${item.loc}" class="btn-icon btn-in">+</a>
+                <a href="issue.html?code=${item.item_code}&loc=${item.loc}" class="btn-icon btn-out">-</a>
+            </div>`;
+
+            tbody.innerHTML += `<tr><td><span style="background:${badge}; color:${badgeText}; padding:4px 8px; border-radius:4px; font-weight:700; font-size:10px;">${item.action_type}</span></td><td><b>${item.item_code}</b></td><td><span style="color:#0f62fe; font-weight:700;">${item.loc}</span></td><td style="color:${qtyColor}; font-weight:700;">${prefix}${item.txn_qty}</td><td><span style="background:#eee; padding:4px 8px; border-radius:4px; font-weight:800; color:#333;">${currentStock}</span></td><td>${item.user}</td><td>${buttons}</td></tr>`;
+        });
+    }
+  </script>
+</body>
+</html>

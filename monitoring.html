@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Monitoring</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { var(--primary): #0d6efd; --bg: #f8f9fa; --white: #ffffff; --text: #212529; --text-muted: #6c757d; --border: #eaedf1; }
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 80px; }
+    
+    .mobile-header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-title { color: #0d6efd; font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; flex: 1; text-align: center; }
+    .menu-icon { font-size: 20px; cursor: pointer; color: var(--text); width: 24px; }
+    
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 250px; background: white; padding: 20px; transform: translateX(-100%); transition: 0.3s; z-index: 200; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 150; }
+    .overlay.active { display: block; }
+    .sidebar a { display: block; padding: 12px; color: #333; text-decoration: none; font-weight: 500; border-radius: 6px; margin-bottom: 5px; }
+    .sidebar a:hover { background: #f4f7fc; color: #0d6efd; }
+
+    .main-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* Massive Section Buttons */
+    .selection-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+    .section-card { background: var(--white); border: 2px solid var(--border); border-radius: 16px; padding: 50px 20px; text-align: center; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-decoration: none; display: block; color: inherit;}
+    .section-card:hover { transform: translateY(-5px); border-color: #0d6efd; box-shadow: 0 10px 25px rgba(13,110,253,0.12); }
+    .section-card .icon { font-size: 60px; margin-bottom: 20px; }
+    .section-card h3 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .section-card p { font-size: 14px; color: var(--text-muted); padding: 0 20px; line-height: 1.5; }
+    
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; text-decoration: none; gap: 4px; }
+    .nav-item.active { color: #0d6efd; }
+    .nav-fab { width: 50px; height: 50px; background: #0d6efd; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 4px solid var(--bg); position: relative; top: -15px; box-shadow: 0 4px 10px rgba(13,110,253,0.3); }
+
+    @media (max-width: 768px) { .selection-container { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="mobile-header">
+    <div class="menu-icon" onclick="toggleMenu()">☰</div>
+    <div class="header-title">WORKSPACE MONITORING</div>
+    <div style="width:24px;"></div>
+  </header>
+
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+      <h2 style="color:#0d6efd; padding-left:12px; margin-top:0;">TRIMS</h2>
+      <a href="index.html">Home</a>
+      <a href="qr_rack.html">Rack View</a>
+      <a href="inventory.html">Inventory List</a>
+      <a href="monitoring.html" style="background:#eef4ff; color:#0d6efd;">Monitoring</a>
+  </aside>
+
+  <div class="main-content">
+      <div class="selection-container">
+          <a href="sap_analysis.html" class="section-card">
+              <div class="icon">📊</div>
+              <h3>SAP Stock Analysis</h3>
+              <p>Compare physical shelf quantities against imported SAP records to identify shortages or excesses.</p>
+          </a>
+          <a href="rack_map.html" class="section-card">
+              <div class="icon">🏢</div>
+              <h3>Visual Rack Map</h3>
+              <p>View a 3D-style layout of your physical racks and click on any bin to inspect its contents.</p>
+          </a>
+      </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <a href="entry.html"><div class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div></a>
+    <a href="issue.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="monitoring.html" class="nav-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>Monitor</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+  </script>
+</body>
+</html>

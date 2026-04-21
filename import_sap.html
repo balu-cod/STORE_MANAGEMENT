@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | SAP Import</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    :root { 
+        --primary: #0f62fe; 
+        --bg: #f4f7fc; 
+        --white: #fff; 
+        --text: #161616; 
+        --border: #e0e0e0; 
+        --success: #24a148;
+        --danger: #da1e28;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
+
+    .mobile-header { background: var(--white); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+    .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+
+    .main-content { padding: 24px; max-width: 600px; margin: 0 auto; }
+    .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+
+    .upload-card { background: var(--white); border: 2px dashed var(--border); border-radius: 12px; padding: 40px 24px; text-align: center; margin-bottom: 24px; transition: border-color 0.3s; }
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; margin-top: 16px; }
+    .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+    .btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-block; width: 100%; text-align: center; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Mapping UI Styles */
+    #mapping-section { display: none; background: var(--white); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
+    .map-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+    .map-field label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #333; }
+    .map-field select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; }
+
+    #preview-section { display: none; background: var(--white); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
+    .preview-stats { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+    
+    #status-msg { margin-top: 16px; font-size: 14px; text-align: center; font-weight: 500; }
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+    .text-primary { color: var(--primary); }
+
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; text-decoration: none; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-fab { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 4px solid var(--bg); position: relative; top: -15px; box-shadow: 0 4px 10px rgba(15,98,254,0.3); }
+  </style>
+</head>
+<body>
+
+  <header class="mobile-header">
+    <a href="index.html" style="text-decoration:none; color:var(--text); font-size:20px;">←</a>
+    <div class="brand">SAP IMPORT</div>
+    <div style="width: 20px;"></div> 
+  </header>
+
+  <div class="main-content">
+    <div class="page-title">Sync SAP Stock</div>
+    <div class="page-subtitle">Map Codes and SAP Stock manually from Row 1. Fuzzy matching is enabled on the backend to catch slight code variations.</div>
+
+    <div class="upload-card" id="drop-zone">
+        <div style="font-size: 40px; color: var(--primary); margin-bottom: 16px;">📊</div>
+        <h3 style="font-size: 16px; margin-bottom: 8px;">1. Select SAP spreadsheet</h3>
+        <p style="font-size: 12px; color: #666;">Supports .xlsx, .xls, and .csv</p>
+        
+        <div class="file-input-wrapper">
+            <button class="btn" style="width: auto;">Choose File</button>
+            <input type="file" id="file-upload" accept=".xlsx, .xls, .csv">
+        </div>
+    </div>
+
+    <div id="mapping-section">
+        <h3 style="font-size: 16px; margin-bottom: 5px;">2. Map Your Columns</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Match the SAP Excel columns to the required fields.</p>
+        
+        <div class="map-grid">
+            <div class="map-field">
+                <label>Material Code <span style="color:red">*</span></label>
+                <select id="map-code"></select>
+            </div>
+            <div class="map-field">
+                <label>SAP Stock (Quantity) <span style="color:red">*</span></label>
+                <select id="map-sap"></select>
+            </div>
+        </div>
+        <button class="btn" style="background:#198038;" onclick="applyMapping()">Preview Data</button>
+    </div>
+
+    <div id="preview-section">
+        <div class="preview-stats">
+            <span id="valid-rows">Valid Codes: 0</span>
+        </div>
+        <button id="upload-btn" class="btn" onclick="startUpload()">3. Confirm & Sync SAP Data</button>
+        <div id="status-msg"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <a href="entry.html"><div class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div></a>
+    <a href="issue.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="search.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Search</a>
+  </nav>
+
+  <script>
+    let globalRawData = []; 
+    let globalSapArray = []; 
+
+    document.getElementById('file-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const data = evt.target.result;
+            const workbook = XLSX.read(data, {type: 'binary'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            
+            globalRawData = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+            if (globalRawData.length > 0) {
+                let excelHeaders = Object.keys(globalRawData[0]);
+                setupMappingUI(excelHeaders);
+            } else {
+                alert("Could not read any data from this file.");
+            }
+        };
+        reader.readAsBinaryString(file);
+    });
+
+    function setupMappingUI(headers) {
+        document.getElementById('mapping-section').style.display = 'block';
+        document.getElementById('preview-section').style.display = 'none';
+
+        const mapSelects = ['map-code', 'map-sap'];
+
+        mapSelects.forEach(selId => {
+            const dropdown = document.getElementById(selId);
+            dropdown.innerHTML = '<option value="">-- Ignore / Not Present --</option>'; 
+
+            headers.forEach(h => {
+                let opt = document.createElement('option');
+                opt.value = h;
+                opt.text = h;
+                dropdown.appendChild(opt);
+            });
+        });
+
+        headers.forEach(h => {
+            let lower = h.toLowerCase().trim();
+            if (['code', 'material', 'material code', 'item', 'item code'].includes(lower)) {
+                document.getElementById('map-code').value = h;
+            }
+            if (['sap', 'sap stock', 'system stock', 'book qty', 'unrestricted', 'system', 'stock'].includes(lower)) {
+                document.getElementById('map-sap').value = h;
+            }
+        });
+    }
+
+    function applyMapping() {
+        const codeField = document.getElementById('map-code').value;
+        const sapField = document.getElementById('map-sap').value;
+
+        if (!codeField) {
+            alert("You must select which column contains your Material Code!");
+            return;
+        }
+        if (!sapField) {
+            alert("You must select which column contains your SAP Stock!");
+            return;
+        }
+
+        globalSapArray = [];
+        let sapMap = {}; 
+
+        globalRawData.forEach(row => {
+            let code = row[codeField] ? row[codeField].toString().trim() : "";
+            code = code.substring(0, 15); 
+            
+            // Handle commas in numbers
+            let sapRaw = row[sapField] ? row[sapField].toString().replace(/,/g, '') : "0";
+            let sap = parseInt(sapRaw) || 0;
+
+            if (code !== "" && sap > 0) {
+                // Combine duplicates
+                sapMap[code] = (sapMap[code] || 0) + sap;
+            }
+        });
+
+        for (let code in sapMap) {
+            globalSapArray.push({ code: code, excel_stock: sapMap[code] });
+        }
+
+        const statusMsg = document.getElementById('status-msg');
+        document.getElementById('valid-rows').innerText = `Valid SAP Codes Mapped: ${globalSapArray.length}`;
+        document.getElementById('preview-section').style.display = 'block';
+
+        if (globalSapArray.length > 0) {
+            document.getElementById('upload-btn').disabled = false;
+            statusMsg.innerText = "Data preview successful. Ready to Sync.";
+            statusMsg.className = "text-success";
+        } else {
+            document.getElementById('upload-btn').disabled = true;
+            statusMsg.innerText = "Error: No data found using this mapping.";
+            statusMsg.className = "text-danger";
+        }
+    }
+
+    async function startUpload() {
+        const btn = document.getElementById('upload-btn');
+        const statusMsg = document.getElementById('status-msg');
+        
+        btn.disabled = true;
+        btn.innerText = "Syncing Database...";
+        statusMsg.className = "text-primary";
+        statusMsg.innerText = "Please wait, syncing SAP numbers with fuzzy matching...";
+
+        const payload = {
+            action: 'import_sap',
+            user: 'Admin',
+            items: globalSapArray
+        };
+
+        try {
+            const response = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                statusMsg.innerText = `Success! ${globalSapArray.length} SAP items synced.`;
+                statusMsg.className = "text-success";
+                btn.innerText = "Sync Complete";
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            statusMsg.innerText = `Error updating database: ${error.message}`;
+            statusMsg.className = "text-danger";
+            btn.innerText = "Finished (with errors)";
+            btn.disabled = false;
+        }
+    }
+  </script>
+</body>
+</html>

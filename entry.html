@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trims | Stock Entry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .app-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; pointer-events: none; opacity: 0.15; width: 85%; max-width: 550px; }
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 90px; }
+    .mobile-header { background: var(--white); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 1000; }
+    .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+    .main-content { padding: 24px; max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
+    .card { background: var(--white); padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 24px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #6f6f6f; text-transform: uppercase; }
+    .input-group { position: relative; display: flex; align-items: center; margin-bottom: 16px; }
+    .input-group input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; }
+    .input-group input:focus { border-color: var(--primary); }
+    .input-group input[readonly] { background-color: #f4f4f4; color: #888; }
+    .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .btn-secondary { background: #e0e0e0; color: #333; margin-bottom: 15px; font-size: 14px; padding: 10px; }
+    .recent-header { font-weight: 700; font-size: 16px; margin-bottom: 12px; color: #333; }
+    .recent-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .recent-table th, .recent-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+    .qty-plus { color: #008000; font-weight: 700; }
+    .btn-reuse { padding: 4px 8px; background: #eef4ff; color: var(--primary); border: 1px solid #cce0ff; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 10px; }
+    .remove-btn { color: #da1e28; font-size: 12px; font-weight: 600; cursor: pointer; float: right; margin-top: -5px; }
+    .item-row { border-bottom: 1px dashed #eee; margin-bottom: 20px; padding-bottom: 10px; }
+    .item-row:last-child { border-bottom: none; }
+
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: #888; text-decoration: none; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-fab { width: 56px; height: 56px; background: var(--primary); border-radius: 50%; position: absolute; top: -20px; display: flex; align-items: center; justify-content: center; color: white; border: 4px solid var(--bg); }
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 260px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: 0.3s; z-index: 1200; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1100; }
+    .overlay.active { display: block; }
+    
+    /* NEW: Warning Modal Styles */
+    .warning-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 1250; }
+    .warning-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1300; background: var(--white); padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .warning-list { background: #fdf3f3; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #f8d7da; }
+  </style>
+</head>
+<body onload="initEntry()">
+
+  <img src="1000019846.jpg" class="app-watermark" alt="Logo">
+
+  <header class="mobile-header"><div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div><div class="brand">Record Entry</div><div style="width:24px"></div></header>
+  <div class="overlay" onclick="toggleMenu()"></div>
+
+  <div class="warning-overlay" id="warningOverlay"></div>
+  <div class="warning-modal" id="warningModal">
+    <h3 style="color:#da1e28; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Duplicate Locations Found
+    </h3>
+    <div id="warningContent" style="font-size:14px; margin-bottom:20px; color:#333; line-height:1.6;"></div>
+    <div style="display:flex; gap:12px;">
+       <button class="btn btn-secondary" style="margin:0; flex:1;" onclick="cancelSubmit()">Cancel</button>
+       <button class="btn" style="margin:0; flex:1;" onclick="confirmSubmit()">Proceed Anyway</button>
+    </div>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <div style="font-size:22px; font-weight:700; color:var(--primary); margin-bottom:40px;">TRIMS</div>
+    <a href="dashboard.html" class="side-link">Dashboard</a>
+    <a href="inventory.html" class="side-link">Inventory</a>
+    <a href="entry.html" class="side-link active">Stock Entry</a>
+    <a href="search.html" class="side-link">Search</a>
+    <a href="issue.html" class="side-link">Issue Item</a>
+  </aside>
+
+  <div class="main-content">
+    <div class="card">
+      <form onsubmit="submitEntry(event)">
+        <label>Entry Date</label>
+        <div class="input-group"><input type="date" id="txn_date" required></div>
+
+        <label>Bin Number</label>
+        <div class="input-group">
+            <input type="text" id="bin_number" placeholder="Enter Bin..." required oninput="handleBinInput(this)" maxlength="5" style="text-transform:uppercase;">
+        </div>
+        <label>Rack</label>
+        <div class="input-group"><input type="text" id="rack" placeholder="Auto-fills from Bin" readonly></div>
+        
+        <div id="items-container">
+            <div class="item-row">
+                <label>Material Code</label>
+                <div class="input-group">
+                    <input type="text" class="item-code" placeholder="Enter Code..." required style="text-transform:uppercase;">
+                </div>
+                <label>Quantity</label>
+                <div class="input-group">
+                    <input type="number" class="item-qty" placeholder="0" required>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-secondary" onclick="addItemRow()">+ Add More Code</button>
+
+        <label>Entered By</label>
+        <div class="input-group"><input type="text" id="user" placeholder="Name" required></div>
+        
+        <button type="submit" class="btn" id="submitBtn">Save Entry</button>
+      </form>
+    </div>
+
+    <div class="recent-header">Recent Entries in this Bin</div>
+    <div class="card" style="padding:0; overflow:hidden;">
+        <table class="recent-table">
+            <thead><tr><th>Bin</th><th>Code</th><th>Qty</th><th>Action</th></tr></thead>
+            <tbody id="recentBody"><tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Enter Bin Number to see history</td></tr></tbody>
+        </table>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+    <a href="entry.html" class="nav-item active"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Entry</a>
+    <div style="position:relative; width:100%; display:flex; justify-content:center;"><a href="entry.html" class="nav-fab"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></a></div>
+    <a href="issue.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>Issue</a>
+    <a href="search.html" class="nav-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Search</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+
+    function initEntry() {
+        document.getElementById('txn_date').valueAsDate = new Date();
+        const urlParams = new URLSearchParams(window.location.search);
+        const binParam = urlParams.get('bin') || urlParams.get('loc');
+        if(binParam) {
+            const binInput = document.getElementById('bin_number');
+            binInput.value = binParam;
+            handleBinInput(binInput); 
+        }
+        const codeParam = urlParams.get('code');
+        if(codeParam) { document.querySelector('.item-code').value = codeParam; }
+    }
+
+    function addItemRow() {
+        const container = document.getElementById('items-container');
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `
+            <span class="remove-btn" onclick="this.parentElement.remove()">✕ Remove</span>
+            <label>Material Code</label>
+            <div class="input-group"><input type="text" class="item-code" placeholder="Enter Code..." required style="text-transform:uppercase;"></div>
+            <label>Quantity</label>
+            <div class="input-group"><input type="number" class="item-qty" placeholder="0" required></div>
+        `;
+        container.appendChild(div);
+    }
+
+    function handleBinInput(input) {
+        let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); 
+        input.value = val;
+        if (val.length >= 2) document.getElementById('rack').value = val.substring(0, 2);
+        else document.getElementById('rack').value = "";
+        if (val.length >= 4) loadRecentEntries(val);
+    }
+
+    function reuseData(loc, code) {
+        document.getElementById('bin_number').value = loc;
+        document.querySelector('.item-code').value = code;
+        handleBinInput(document.getElementById('bin_number')); 
+    }
+
+    async function loadRecentEntries(filterLoc = "") {
+        if(!filterLoc) return;
+        try {
+            const res = await fetch('api.php?action=get_transactions');
+            const data = await res.json();
+            const entries = data.filter(i => i.action_type === 'Entry' && i.loc && i.loc.toUpperCase().replace('-','') === filterLoc.toUpperCase()).slice(0, 5);
+            const tbody = document.getElementById('recentBody');
+            tbody.innerHTML = "";
+            if (entries.length === 0) { tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px;'>No recent entries</td></tr>"; return; }
+            entries.forEach(item => {
+                tbody.innerHTML += `<tr><td><b>${item.loc}</b></td><td>${item.item_code}</td><td class="qty-plus">+${item.txn_qty}</td><td><button type="button" class="btn-reuse" onclick="reuseData('${item.loc}', '${item.item_code}')">Reuse</button></td></tr>`;
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    let pendingPayload = null;
+
+    // Phase 1: Validating against the database before saving
+    async function submitEntry(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const binNum = document.getElementById('bin_number').value.trim().toUpperCase();
+      
+      const itemRows = document.querySelectorAll('.item-row');
+      const items = [];
+      itemRows.forEach(row => {
+          items.push({
+              code: row.querySelector('.item-code').value.trim().toUpperCase(),
+              qty: row.querySelector('.item-qty').value
+          });
+      });
+
+      btn.innerText = "Checking locations..."; btn.disabled = true;
+
+      let warningHTML = "";
+      let hasWarnings = false;
+
+      // Check API for existing locations for each code
+      try {
+          for (const item of items) {
+              const res = await fetch('api.php?action=check_locations&code=' + encodeURIComponent(item.code));
+              const locData = await res.json();
+              
+              // Filter out the bin we are currently trying to add it to, and ignore system bins
+              const otherLocs = locData.filter(l => l.loc.toUpperCase() !== binNum && l.loc !== 'UNASSIGNED' && l.loc !== 'VIRTUAL');
+              
+              if (otherLocs.length > 0) {
+                  hasWarnings = true;
+                  warningHTML += `<div class="warning-list"><strong>Code: ${item.code}</strong><br>`;
+                  otherLocs.forEach(l => {
+                      warningHTML += `• Location: <b>${l.loc}</b> (Stock: ${l.qty})<br>`;
+                  });
+                  warningHTML += `</div>`;
+              }
+          }
+      } catch (err) {
+          console.error("Validation error", err);
+      }
+
+      pendingPayload = { action: 'add', loc: binNum, user: document.getElementById('user').value, items: items };
+
+      // Trigger the modal if issues exist
+      if (hasWarnings) {
+          document.getElementById('warningContent').innerHTML = warningHTML;
+          document.getElementById('warningOverlay').style.display = 'block';
+          document.getElementById('warningModal').style.display = 'block';
+          btn.innerText = "Save Entry"; btn.disabled = false;
+      } else {
+          executeSubmit(); // No duplicate locations found, save immediately
+      }
+    }
+
+    // Modal Control Functions
+    function cancelSubmit() {
+        document.getElementById('warningOverlay').style.display = 'none';
+        document.getElementById('warningModal').style.display = 'none';
+        pendingPayload = null;
+    }
+
+    function confirmSubmit() {
+        document.getElementById('warningOverlay').style.display = 'none';
+        document.getElementById('warningModal').style.display = 'none';
+        executeSubmit();
+    }
+
+    // Phase 2: Actually posting the data to the API
+    async function executeSubmit() {
+        if (!pendingPayload) return;
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = "Saving..."; btn.disabled = true;
+        
+        try {
+            const response = await fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pendingPayload) });
+            const result = await response.json();
+            
+            if(result.status === 'success') {
+                window.location.href = `qr_box.html?code=${encodeURIComponent(pendingPayload.loc)}`;
+            } else {
+                alert("Error: " + result.message);
+                btn.disabled = false; btn.innerText = "Save Entry";
+            }
+        } catch (error) { 
+            alert("Connection Error"); 
+            btn.disabled = false; btn.innerText = "Save Entry"; 
+        }
+    }
+  </script>
+</body>
+</html>

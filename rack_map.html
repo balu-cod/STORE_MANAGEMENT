@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Rack Map</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0d6efd; --bg: #f8f9fa; --white: #ffffff; --text: #212529; --text-muted: #6c757d; --border: #eaedf1; --warning: #fd7e14;}
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 80px; }
+    
+    .mobile-header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-title { color: var(--primary); font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; flex: 1; text-align: center; }
+    
+    .main-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .back-btn { background: #e9ecef; color: #495057; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none;}
+    .btn-analyze { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; width: 100%; margin-bottom: 20px;}
+
+    /* Search Bar Styling */
+    .search-container { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; padding: 12px 15px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: 'Inter', sans-serif; }
+    .search-input:focus { border-color: var(--primary); }
+    .search-btn { background: var(--primary); color: white; border: none; padding: 0 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2); min-height: 44px;}
+    .search-btn:hover { background: #0b5ed7; }
+
+    /* Rack View visuals */
+    .rack-container { background: #f1f3f5; border: 2px solid #adb5bd; border-radius: 12px; padding: 20px; margin-bottom: 30px; }
+    .rack-title { font-weight: 800; font-size: 18px; margin-bottom: 15px; color: #343a40; text-transform: uppercase; border-bottom: 2px solid #dee2e6; padding-bottom: 5px; }
+    .bin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
+    .bin-container { background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; padding: 10px; }
+    .bin-title { font-size: 11px; font-weight: 800; color: #495057; text-align: center; margin-bottom: 8px; letter-spacing: 0.5px;}
+    .box-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .loc-box { background: var(--white); border: 1px solid #adb5bd; border-radius: 4px; padding: 6px 2px; text-align: center; font-size: 10px; font-weight: 800; cursor: pointer; color: var(--primary); display: flex; align-items: center; justify-content: center; min-height: 28px; word-break: break-all; transition: all 0.2s ease;}
+    .loc-box:hover { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); z-index: 2;}
+    .loc-box.empty { color: #adb5bd; background: #f8f9fa; border-style: dashed; }
+
+    /* Search Highlight States */
+    .loc-box.highlight { background: var(--warning) !important; color: white !important; border-color: var(--warning) !important; transform: scale(1.15); z-index: 10; box-shadow: 0 4px 10px rgba(253, 126, 20, 0.5); }
+    .loc-box.dimmed { opacity: 0.2; pointer-events: none; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
+    .modal-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; font-weight: 800; }
+    .close-btn { color: white; font-size: 24px; cursor: pointer; line-height: 1; }
+    .modal-body { padding: 0; overflow-y: auto; max-height: 400px;}
+    .modal-table { width: 100%; border-collapse: collapse; }
+    .modal-table th { background: #f4f7fc; padding: 10px 15px; font-size: 11px; text-align:left;}
+    .modal-table td { padding: 12px 15px; font-size: 13px; border-bottom: 1px solid var(--border); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <header class="mobile-header">
+    <a href="monitoring.html" style="text-decoration:none; color:var(--text); font-size:20px;">←</a>
+    <div class="header-title">RACK MAP</div>
+    <div style="width:24px;"></div>
+  </header>
+
+  <div class="main-content">
+      <a href="monitoring.html" class="back-btn">← Back to Menu</a>
+      
+      <button id="actionBtnRack" class="btn-analyze" onclick="loadRackMap()">
+          Generate Visual Racks
+      </button>
+
+      <div class="search-container" id="searchBox" style="display:none;">
+          <input type="text" id="rackSearchInput" class="search-input" placeholder="Search Material Code to find its location..." onkeyup="if(event.key === 'Enter') searchRackMap()">
+          <button class="search-btn" onclick="searchRackMap()">Find</button>
+          <button class="search-btn" style="background: var(--warning); box-shadow: 0 4px 6px rgba(253, 126, 20, 0.2);" onclick="findMultiLocationCodes()">Multi-Locs</button>
+      </div>
+
+      <div id="rackMapContainer" style="text-align: center; color: #666; padding: 40px;">
+          Click the button above to build the 3D map from database locations.
+      </div>
+  </div>
+
+  <div class="modal-overlay" id="locModal" onclick="closeModal(event)">
+      <div class="modal-content">
+          <div class="modal-header">
+              <span id="modalLocName">Location Name</span>
+              <span class="close-btn" onclick="closeModal(event, true)">&times;</span>
+          </div>
+          <div class="modal-body">
+              <table class="modal-table">
+                  <thead>
+                      <tr>
+                          <th>Material Code</th>
+                          <th style="text-align:right;">Qty in Box</th>
+                      </tr>
+                  </thead>
+                  <tbody id="modalBody"></tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+
+  <div class="modal-overlay" id="multiLocModal" onclick="closeMultiLocModal(event)">
+      <div class="modal-content" style="max-width: 600px;">
+          <div class="modal-header" style="background: var(--warning);">
+              <span>Codes in Multiple Locations</span>
+              <span class="close-btn" onclick="closeMultiLocModal(event, true)">&times;</span>
+          </div>
+          <div class="modal-body">
+              <table class="modal-table">
+                  <thead>
+                      <tr>
+                          <th>Material Code</th>
+                          <th>Located In</th>
+                      </tr>
+                  </thead>
+                  <tbody id="multiLocBody"></tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+
+  <script>
+    async function safeFetchJSON(url) {
+        const response = await fetch(url);
+        const text = await response.text();
+        try { return JSON.parse(text); } 
+        catch(e) {
+            let cleanErr = text.replace(/<[^>]*>?/gm, '').trim();
+            alert("Database Error:\n" + (cleanErr.substring(0, 150) || "Server error"));
+            throw new Error("Invalid response");
+        }
+    }
+
+    let locationDataMap = {}; 
+
+    async function loadRackMap() {
+        const btn = document.getElementById('actionBtnRack');
+        btn.innerText = "Building Visuals...";
+        btn.disabled = true;
+
+        try {
+            const rawInv = await safeFetchJSON('api.php?action=get_rack_data');
+            locationDataMap = {};
+
+            rawInv.forEach(item => {
+                let loc = item.loc ? item.loc.toUpperCase().trim() : '';
+                if (loc !== '' && loc !== 'UNASSIGNED' && loc !== 'VIRTUAL') {
+                    if (!locationDataMap[loc]) locationDataMap[loc] = [];
+                    if (parseInt(item.qty) > 0) locationDataMap[loc].push(item);
+                }
+            });
+
+            renderRackMap();
+
+            // Show the search bar after rendering
+            document.getElementById('searchBox').style.display = 'flex';
+
+            btn.innerText = "Refresh Map";
+            btn.disabled = false;
+        } catch(e) { btn.innerText = "Error Loading Map"; btn.disabled = false; }
+    }
+
+    function renderRackMap() {
+        const container = document.getElementById('rackMapContainer');
+        container.innerHTML = "";
+        container.style.padding = "0"; 
+
+        let maxCharCode = 64; 
+        let otherLocs = []; 
+
+        function isValidGridLoc(numStr) {
+            let num = parseInt(numStr);
+            let bin = Math.floor(num / 100);
+            let box = num % 100;
+            return (bin >= 1 && bin <= 14 && box >= 1 && box <= 12);
+        }
+
+        Object.keys(locationDataMap).forEach(loc => {
+            let match = loc.match(/^([A-Z])(\d+)$/i); 
+            if (match && isValidGridLoc(match[2])) {
+                let code = match[1].toUpperCase().charCodeAt(0);
+                if (code > maxCharCode) maxCharCode = code;
+            } else {
+                otherLocs.push(loc);
+            }
+        });
+
+        if (maxCharCode < 65 && otherLocs.length === 0) maxCharCode = 65; 
+
+        let racksToRender = [];
+        for (let i = 65; i <= maxCharCode; i++) {
+            racksToRender.push(String.fromCharCode(i));
+        }
+
+        let html = '';
+
+        racksToRender.forEach(rackLetter => {
+            html += `<div class="rack-container"><div class="rack-title">RACK ${rackLetter}</div><div class="bin-grid">`;
+
+            for (let bin = 1; bin <= 14; bin++) {
+                html += `<div class="bin-container"><div class="bin-title">BIN ${bin}</div><div class="box-grid">`;
+
+                for (let box = 1; box <= 12; box++) {
+                    let boxNum = (bin * 100) + box;
+                    let locName = `${rackLetter}${boxNum}`;
+                    let itemsInBox = locationDataMap[locName] || [];
+                    
+                    let hasItems = itemsInBox.length > 0;
+                    let boxClass = hasItems ? "loc-box" : "loc-box empty";
+                    let titleText = hasItems ? `${itemsInBox.length} Material(s) inside` : "Empty Location";
+                    
+                    html += `<div class="${boxClass}" data-loc="${locName}" title="${titleText}" onclick="openModal('${locName}')">${locName}</div>`;
+                }
+
+                html += `</div></div>`;
+            }
+            html += `</div></div>`;
+        });
+
+        if (otherLocs.length > 0) {
+            html += `<div class="rack-container"><div class="rack-title" style="color:var(--danger);">OTHER LOCATIONS (Non-Standard)</div><div class="bin-grid">`;
+            html += `<div class="bin-container" style="grid-column: 1 / -1; background:#fff3cd;"><div class="box-grid" style="grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));">`;
+            
+            otherLocs.sort().forEach(locName => {
+                let itemsInBox = locationDataMap[locName] || [];
+                let hasItems = itemsInBox.length > 0;
+                let boxClass = hasItems ? "loc-box" : "loc-box empty";
+                let titleText = hasItems ? `${itemsInBox.length} Material(s) inside` : "Empty Location";
+                
+                html += `<div class="${boxClass}" data-loc="${locName}" title="${titleText}" onclick="openModal('${locName}')">${locName}</div>`;
+            });
+            html += `</div></div></div></div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    // --- Search Highlight Logic ---
+    function searchRackMap() {
+        const query = document.getElementById('rackSearchInput').value.toLowerCase().trim();
+        const allBoxes = document.querySelectorAll('.loc-box');
+
+        if (query === "") {
+            allBoxes.forEach(box => {
+                box.classList.remove('highlight', 'dimmed');
+            });
+            return;
+        }
+
+        allBoxes.forEach(box => {
+            const locName = box.getAttribute('data-loc');
+            if (!locName) return;
+
+            const itemsInBox = locationDataMap[locName] || [];
+            
+            const isMatch = itemsInBox.some(item => (item.code || "").toLowerCase().includes(query));
+
+            if (isMatch) {
+                box.classList.add('highlight');
+                box.classList.remove('dimmed');
+            } else {
+                box.classList.add('dimmed');
+                box.classList.remove('highlight');
+            }
+        });
+    }
+
+    // --- Multi-Location Discovery Logic ---
+    function findMultiLocationCodes() {
+        let codeLocs = {};
+        
+        // Build reverse map: code -> Set(locations)
+        Object.keys(locationDataMap).forEach(loc => {
+            locationDataMap[loc].forEach(item => {
+                if (!item.code) return;
+                if (!codeLocs[item.code]) codeLocs[item.code] = new Set();
+                codeLocs[item.code].add(loc);
+            });
+        });
+
+        let multiCodes = [];
+        for (let code in codeLocs) {
+            if (codeLocs[code].size > 1) {
+                multiCodes.push({ code: code, locs: Array.from(codeLocs[code]).join(', ') });
+            }
+        }
+
+        // Render to modal
+        const tbody = document.getElementById('multiLocBody');
+        tbody.innerHTML = '';
+        if (multiCodes.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='2' style='text-align:center; padding:20px; color:#6c757d;'>No duplicate materials found across different locations.</td></tr>";
+        } else {
+            multiCodes.forEach(mc => {
+                tbody.innerHTML += `<tr>
+                    <td style="color:var(--primary); font-weight:800;">${mc.code}</td>
+                    <td style="font-size:12px; color:#495057;">${mc.locs}</td>
+                </tr>`;
+            });
+        }
+        
+        document.getElementById('multiLocModal').classList.add('active');
+    }
+
+    function openModal(locName) {
+        document.getElementById('modalLocName').innerText = "LOCATION: " + locName;
+        const tbody = document.getElementById('modalBody');
+        tbody.innerHTML = "";
+
+        let items = locationDataMap[locName] || [];
+
+        if (items.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='2' style='text-align:center; color:#999; padding:20px;'>No physical stock recorded here.</td></tr>";
+        } else {
+            let grouped = {};
+            items.forEach(i => {
+                if (!grouped[i.code]) grouped[i.code] = 0;
+                grouped[i.code] += parseInt(i.qty);
+            });
+
+            for (const [code, qty] of Object.entries(grouped)) {
+                tbody.innerHTML += `<tr><td style="color:var(--primary); font-weight:800;">${code}</td><td style="text-align:right;">${qty}</td></tr>`;
+            }
+        }
+        document.getElementById('locModal').classList.add('active');
+    }
+
+    function closeModal(e, force = false) {
+        if (force || e.target.id === 'locModal') document.getElementById('locModal').classList.remove('active');
+    }
+
+    function closeMultiLocModal(e, force = false) {
+        if (force || e.target.id === 'multiLocModal') document.getElementById('multiLocModal').classList.remove('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Rack Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --success: #198038; --danger: #da1e28; }
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+    .mobile-header { background: var(--white); padding: 16px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:900; }
+    .main-content { padding: 16px; max-width: 1000px; margin: 0 auto; }
+    .rack-header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(15,98,254,0.2); }
+    .rack-title { font-size: 24px; font-weight: 800; letter-spacing: 1px; word-break: break-all; }
+    .rack-sub { opacity: 0.8; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+
+    /* SUMMARY LIST */
+    .summary-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+    .sum-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px; }
+    .sum-title { font-size: 12px; font-weight: 800; color: #666; text-transform: uppercase; }
+    .list-search { padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; width: 120px; outline: none; }
+
+    .sum-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; color: #333; }
+    .sum-item:last-child { border-bottom: none; }
+    .sum-info { display: flex; gap: 8px; align-items: center; }
+    .sum-code { font-weight: 700; color: var(--primary); }
+    
+    .btn-group { display: flex; gap: 6px; }
+    .mini-btn { text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: white; }
+    .btn-in { background: var(--success); }
+    .btn-out { background: var(--danger); }
+    
+    .bin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+    .bin-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; position: relative; }
+    .bin-card:active { transform: scale(0.96); }
+    .bin-number { background: #f1f1f1; color: #666; font-size: 14px; font-weight: 800; padding: 6px 12px; border-radius: 6px; margin-bottom: 10px; width: 100%; }
+    .item-code { font-weight: 800; font-size: 14px; color: var(--primary); margin-bottom: 4px; word-break: break-all; }
+    .item-qty { font-size: 12px; color: #333; font-weight: 600; }
+    .status-empty { color: #ccc; font-weight: 600; font-size: 13px; margin-top: 10px; }
+    .card-filled { border-color: #b3d3ff; background: #f8fbff; }
+    .card-filled .bin-number { background: #e6f0ff; color: var(--primary); }
+  </style>
+</head>
+<body onload="initRackMonitor()">
+
+  <header class="mobile-header">
+    <div onclick="window.location.href='index.html'" style="font-size:24px; cursor:pointer;">&larr;</div>
+    <div style="font-weight:700;">Rack Monitor</div>
+    <div style="width:24px;"></div>
+  </header>
+
+  <div class="main-content">
+    <div class="rack-header">
+        <div class="rack-title" id="rackTitle">--</div>
+        <div class="rack-sub" id="rackSub">Loading...</div>
+    </div>
+
+    <div class="summary-card">
+        <div class="sum-header">
+            <div class="sum-title">Rack Contents</div>
+            <input type="text" id="rackSearch" class="list-search" placeholder="Search..." onkeyup="filterRackList()">
+        </div>
+        <div id="summaryList">Loading list...</div>
+    </div>
+    
+    <div class="bin-grid" id="binGrid"></div>
+  </div>
+
+  <script>
+    const BINS_PER_RACK = 12;
+
+    async function initRackMonitor() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let rackID = urlParams.get('rack'); 
+
+        if(!rackID) { document.querySelector('.main-content').innerHTML = "No Rack ID"; return; }
+        document.getElementById('rackTitle').innerText = rackID;
+
+        try {
+            let parts = rackID.split('-'); 
+            let letter = parts[0]; 
+            let rackNum = parts[1]; 
+
+            if(!rackNum || isNaN(parseInt(rackNum))) {
+                 let match = rackID.match(/([A-Z]+)(\d+)/);
+                 if(match) { letter = match[1]; rackNum = match[2]; }
+            }
+            if(!rackNum) rackNum = "1";
+
+            document.getElementById('rackSub').innerText = `Controlling Rack ${rackNum}`;
+
+            const res = await fetch('api.php?action=get_inventory');
+            const inventory = await res.json();
+            const grid = document.getElementById('binGrid');
+            const summary = document.getElementById('summaryList');
+            grid.innerHTML = "";
+            summary.innerHTML = "";
+
+            let itemsFound = [];
+
+            for (let i = 1; i <= BINS_PER_RACK; i++) {
+                let suffix = i < 10 ? "0" + i : i;
+                let binID = `${letter}${rackNum}${suffix}`;
+                let item = inventory.find(row => row.loc === binID);
+
+                if (item) {
+                    itemsFound.push(item);
+                    grid.innerHTML += `
+                    <div class="bin-card card-filled" onclick="openBin('${binID}')">
+                        <div class="bin-number">${binID}</div>
+                        <div class="item-code">${item.code}</div>
+                        <div class="item-qty">Qty: ${item.qty}</div>
+                    </div>`;
+                } else {
+                    grid.innerHTML += `
+                    <div class="bin-card" onclick="openBin('${binID}')">
+                        <div class="bin-number">${binID}</div>
+                        <div class="status-empty">Empty</div>
+                    </div>`;
+                }
+            }
+
+            if(itemsFound.length > 0) {
+                itemsFound.forEach(item => {
+                    summary.innerHTML += `
+                    <div class="sum-item">
+                        <div class="sum-info">
+                            <span>${item.loc}</span>
+                            <span class="sum-code">${item.code}</span>
+                            <span>(${item.qty})</span>
+                        </div>
+                        <div class="btn-group">
+                            <a href="entry.html?code=${encodeURIComponent(item.code)}&bin=${item.loc}" class="mini-btn btn-in">Entry</a>
+                            <a href="issue.html?code=${encodeURIComponent(item.code)}&bin=${item.loc}" class="mini-btn btn-out">Issue</a>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                summary.innerHTML = `<div style="text-align:center; color:#999; padding:10px;">No items found in this rack</div>`;
+            }
+
+        } catch(e) { console.error(e); }
+    }
+
+    function filterRackList() {
+        const query = document.getElementById('rackSearch').value.toUpperCase();
+        const items = document.querySelectorAll('.sum-item');
+        items.forEach(item => {
+            const text = item.innerText.toUpperCase();
+            item.style.display = text.includes(query) ? "flex" : "none";
+        });
+    }
+
+    function openBin(binID) {
+        window.location.href = `bincard.html?code=${encodeURIComponent(binID)}`;
+    }
+  </script>
+</body>
+</html>

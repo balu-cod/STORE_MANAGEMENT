@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Series Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --success: #198038; --danger: #da1e28; }
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 60px; }
+    
+    .mobile-header { background: var(--white); padding: 16px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:900; }
+    .main-content { padding: 16px; max-width: 1000px; margin: 0 auto; }
+    
+    .grand-header { background: #161616; color: white; padding: 24px; border-radius: 12px; text-align: center; margin-bottom: 12px; }
+    .grand-title { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+    
+    /* SUMMARY LIST & SEARCH */
+    .summary-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 24px; max-height: 300px; overflow-y: auto; }
+    .sum-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    .sum-title { font-size: 14px; font-weight: 800; color: #333; text-transform: uppercase; }
+    
+    .list-search { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; width: 150px; outline: none; }
+    .list-search:focus { border-color: var(--primary); }
+
+    .sum-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; color: #333; }
+    .sum-info { display: flex; gap: 10px; align-items: center; }
+    .sum-loc { background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .sum-code { font-weight: 700; color: var(--primary); }
+    
+    /* ACTION BUTTONS */
+    .btn-group { display: flex; gap: 6px; }
+    .mini-btn { text-decoration: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: white; }
+    .btn-in { background: var(--success); }
+    .btn-out { background: var(--danger); }
+
+    .search-input { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border); font-size: 16px; margin-bottom: 24px; outline: none; }
+    
+    .rack-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .rack-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; border-left: 4px solid var(--primary); }
+    .rack-name { font-size: 20px; font-weight: 800; color: var(--primary); }
+    .item-preview { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; }
+  </style>
+</head>
+<body onload="initSeries()">
+
+  <header class="mobile-header">
+    <div onclick="window.location.href='index.html'" style="font-size:24px; cursor:pointer;">&larr;</div>
+    <div style="font-weight:700;">Grandmaster View</div>
+    <div style="width:24px;"></div>
+  </header>
+
+  <div class="main-content">
+    <div class="grand-header">
+        <span class="grand-title" id="seriesTitle">SERIES --</span>
+        <div style="font-size:13px; opacity:0.8;">Grandmaster Control</div>
+    </div>
+
+    <div class="summary-card">
+        <div class="sum-header-row">
+            <div class="sum-title">Total Inventory</div>
+            <input type="text" id="listSearch" class="list-search" placeholder="Filter List..." onkeyup="filterList()">
+        </div>
+        <div id="seriesSummary">Loading...</div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-input" placeholder="Search Master ID (e.g. A1) or Code in Racks..." onkeyup="filterRacks()">
+
+    <div class="rack-list" id="rackList"></div>
+  </div>
+
+  <script>
+    const BINS_PER_RACK = 12;
+    let allInventory = []; 
+    let racksData = [];    
+
+    async function initSeries() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const series = urlParams.get('series'); 
+        const totalBins = parseInt(urlParams.get('total') || 84);
+
+        if(!series) return;
+        document.getElementById('seriesTitle').innerText = "SERIES " + series;
+
+        const res = await fetch('api.php?action=get_inventory');
+        allInventory = await res.json();
+
+        // 1. Populate Series Summary with Buttons
+        const summaryDiv = document.getElementById('seriesSummary');
+        const seriesItems = allInventory.filter(i => i.loc && i.loc.startsWith(series));
+        
+        if(seriesItems.length > 0) {
+            summaryDiv.innerHTML = seriesItems.map(i => `
+                <div class="sum-item">
+                    <div class="sum-info">
+                        <span class="sum-loc">${i.loc}</span>
+                        <span class="sum-code">${i.code}</span>
+                        <span>(${i.qty})</span>
+                    </div>
+                    <div class="btn-group">
+                        <a href="entry.html?code=${encodeURIComponent(i.code)}&bin=${i.loc}" class="mini-btn btn-in">Entry</a>
+                        <a href="issue.html?code=${encodeURIComponent(i.code)}&bin=${i.loc}" class="mini-btn btn-out">Issue</a>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            summaryDiv.innerHTML = "<div style='text-align:center; color:#999'>No items in this series</div>";
+        }
+
+        // 2. Build Racks
+        const totalRacks = Math.ceil(totalBins / BINS_PER_RACK);
+        const list = document.getElementById('rackList');
+        list.innerHTML = "";
+        racksData = [];
+
+        for(let r=1; r<=totalRacks; r++) {
+            const rackID = `${series}-${r}-MASTER`;
+            
+            let expectedBinIDs = [];
+            for(let b=1; b<=BINS_PER_RACK; b++) {
+                let suffix = b < 10 ? "0" + b : b;
+                expectedBinIDs.push(`${series}${r}${suffix}`);
+            }
+
+            const itemsInRack = allInventory.filter(item => expectedBinIDs.includes(item.loc));
+
+            const rackObj = {
+                id: rackID,
+                simpleId: `${series}${r}`, 
+                name: `RACK ${r}`,
+                items: itemsInRack,
+                elementId: `rackCard-${r}`
+            };
+            racksData.push(rackObj);
+
+            let itemHTML = itemsInRack.length > 0 
+                ? itemsInRack.map(i => `<div style="display:flex; justify-content:space-between;"><span>${i.code}</span><b>${i.loc}</b></div>`).join('')
+                : "<div style='color:#999; font-style:italic;'>Empty</div>";
+
+            list.innerHTML += `
+            <div class="rack-card" id="rackCard-${r}" onclick="location.href='rack_monitor.html?rack=${rackID}'">
+                <div class="rack-name">RACK ${r} <span style="font-size:12px; background:#333; color:white; padding:2px 6px; border-radius:4px;">${rackObj.simpleId}</span></div>
+                <div class="item-preview">${itemHTML}</div>
+            </div>`;
+        }
+    }
+
+    function filterList() {
+        const query = document.getElementById('listSearch').value.toUpperCase();
+        const items = document.querySelectorAll('.sum-item');
+        items.forEach(item => {
+            const text = item.innerText.toUpperCase();
+            item.style.display = text.includes(query) ? "flex" : "none";
+        });
+    }
+
+    function filterRacks() {
+        const query = document.getElementById('searchInput').value.toUpperCase().trim();
+        racksData.forEach(rack => {
+            const card = document.getElementById(rack.elementId);
+            if (query === "") { card.style.display = "block"; return; }
+            const matchName = rack.simpleId.includes(query) || rack.name.includes(query);
+            const matchItem = rack.items.some(i => i.code.toUpperCase().includes(query));
+            card.style.display = (matchName || matchItem) ? "block" : "none";
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Preview & Filter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --border: #e0e0e0; --text: #161616; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); padding: 20px; margin: 0; color: var(--text); }
+        .container { max-width: 1000px; margin: auto; background: var(--white); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* Filter Section Styling */
+        .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .filter-group { display: flex; background: #eee; padding: 4px; border-radius: 10px; }
+        .filter-btn { 
+            border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; 
+            font-weight: 600; font-size: 14px; transition: 0.3s; color: #555; background: transparent; 
+        }
+        .filter-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        
+        .search-box { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; outline: none; box-sizing: border-box; }
+        .search-box:focus { border-color: var(--primary); }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9f9f9; color: #666; text-align: left; padding: 14px; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #eee; }
+        td { padding: 14px; border-bottom: 1px solid #eee; font-size: 14px; }
+        
+        .badge { font-weight: 700; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-sap { color: var(--primary); background: #edf5ff; }
+        .badge-physical { color: #161616; background: #f4f4f4; }
+        .new-tag { color: #da1e28; background: #fff1f1; margin-left: 8px; font-size: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="filter-header">
+        <h2>Stock Analysis Preview</h2>
+        <div class="filter-group">
+            <button class="filter-btn active" id="btnExcel" onclick="setFilter('excel')">Excel View</button>
+            <button class="filter-btn" id="btnPhysical" onclick="setFilter('physical')">Physical Only</button>
+        </div>
+    </div>
+
+    <div id="statusText" style="font-size: 13px; color: #666; margin-bottom: 15px;">Loading data...</div>
+    <input type="text" id="searchInput" class="search-box" placeholder="Search Material Code..." onkeyup="applySearch()">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Material Code</th>
+                <th>Physical (Database)</th>
+                <th>Excel (SAP)</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody id="pBody">
+            <tr><td colspan="4" style="text-align:center;">Initializing...</td></tr>
+        </tbody>
+    </table>
+    <br>
+    <a href="qr_rack.html" style="color: var(--primary); text-decoration: none; font-weight: 600;">← Back to Dashboard</a>
+</div>
+
+<script>
+    let allData = [];
+    let currentMode = 'excel'; // Default view
+
+    async function fetchData() {
+        try {
+            // Using existing API action to get latest upload data
+            const response = await fetch('api.php?action=get_excel_only_preview');
+            allData = await response.json();
+            renderTable();
+        } catch (e) {
+            document.getElementById('pBody').innerHTML = "<tr><td colspan='4' style='color:red;'>Error fetching database records.</td></tr>";
+        }
+    }
+
+    function setFilter(mode) {
+        currentMode = mode;
+        // Update Button UI
+        document.getElementById('btnExcel').classList.toggle('active', mode === 'excel');
+        document.getElementById('btnPhysical').classList.toggle('active', mode === 'physical');
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('pBody');
+        const searchVal = document.getElementById('searchInput').value.toUpperCase();
+        tbody.innerHTML = "";
+
+        // Apply Mode Filtering
+        let filtered = allData;
+        if (currentMode === 'physical') {
+            // Filter 1: Physical - Only shows items present in the database as previous (qty > 0)
+            filtered = allData.filter(item => parseInt(item.physical_qty) > 0);
+        } 
+        // Filter 2: Excel - Displays total data present in the excel sheet (default)
+
+        // Apply Search Filtering
+        if (searchVal) {
+            filtered = filtered.filter(item => item.code.toUpperCase().includes(searchVal));
+        }
+
+        document.getElementById('statusText').innerText = `Showing ${filtered.length} items (${currentMode.toUpperCase()} mode)`;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px;'>No matching records found.</td></tr>";
+            return;
+        }
+
+        filtered.forEach(item => {
+            const isNew = parseInt(item.physical_qty) === 0;
+            tbody.innerHTML += `
+                <tr>
+                    <td>
+                        <b>${item.code}</b>
+                        ${isNew ? '<span class="badge new-tag">NEW</span>' : ''}
+                    </td>
+                    <td><span class="badge badge-physical">${item.physical_qty || 0}</span></td>
+                    <td><span class="badge badge-sap">${item.sap_stock}</span></td>
+                    <td><span style="font-size:12px; color:#888;">${isNew ? 'Excel Only' : 'Matched'}</span></td>
+                </tr>
+            `;
+        });
+    }
+
+    function applySearch() {
+        renderTable();
+    }
+
+    // Initial Load
+    fetchData();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; --danger: #da1e28; --success: #198038; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 100px; margin: 0; font-family: 'Inter', sans-serif; }
+    
+    .mobile-header { background: var(--white); padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 280px; background: var(--white); padding: 24px; transform: translateX(-100%); transition: 0.3s; z-index: 2000; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1500; }
+    .overlay.active { display: block; }
+    .side-link { display: block; padding: 14px 16px; margin-bottom: 4px; color: #525252; border-radius: 8px; font-weight: 500; text-decoration: none; }
+    .side-link.active { background: #eff6ff; color: var(--primary); font-weight: 700; }
+
+    .main-content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    
+    /* SEARCH BAR STYLES */
+    .search-wrapper { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; background: white; padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
+    .search-input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; min-width: 120px; }
+    .search-date { width: 140px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
+    .btn-search-main { padding: 0 20px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+    .table-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th { text-align: left; padding: 14px; background: #f9f9f9; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    td { padding: 14px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+
+    .act-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .act-Entry { background: #e6f7ff; color: #0043ce; }
+    .act-Issue { background: #fff1f1; color: #da1e28; }
+    .qty-plus { color: var(--success); font-weight: 700; }
+    .qty-minus { color: var(--danger); font-weight: 700; }
+    .stock-badge { background: #eee; padding: 4px 8px; border-radius: 4px; font-weight: 700; color: #333; }
+
+    .export-btn { background-color: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 72px; background: var(--white); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; justify-items: center; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; text-decoration: none; }
+    
+    @media (max-width: 768px) { .hide-mobile { display: none; } }
+  </style>
+</head>
+<body onload="initDashboard()">
+  
+  <header class="mobile-header">
+    <div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div>
+    <div style="font-weight:700; font-size:18px; color:var(--primary);">Dashboard</div>
+    <div style="width:24px"></div>
+  </header>
+
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div style="padding:20px; font-weight:800; font-size:20px; color:var(--primary);">TRIMS</div>
+    <a href="index.html" class="side-link">Home</a>
+    <a href="dashboard.html" class="side-link active">Dashboard</a>
+    <a href="entry.html" class="side-link">Entry</a>
+    <a href="issue.html" class="side-link">Issue</a>
+    <a href="search.html" class="side-link">Search</a>
+  </aside>
+
+  <div class="main-content">
+    
+    <div class="search-wrapper">
+        <input type="text" id="dashSearch" class="search-input" placeholder="Search Code, Loc, WO..." onkeyup="filterDashboard()">
+        <input type="date" id="dashDate" class="search-date" onchange="filterDashboard()">
+        <button class="btn-search-main" onclick="filterDashboard()">🔍 Search</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">Recent Activity</h3>
+        <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+
+    <div class="table-card" style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>WO</th>
+                    <th>Code</th>
+                    <th>Loc</th>
+                    <th>Txn Qty</th>
+                    <th>Current Stock</th>
+                    <th class="hide-mobile">User</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="dash-body"><tr><td colspan="8" style="text-align:center; padding:30px;">Loading Data...</td></tr></tbody>
+        </table>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">Home</a>
+    <a href="entry.html" class="nav-item">Entry</a>
+    <a href="issue.html" class="nav-item">Issue</a>
+    <a href="search.html" class="nav-item">Search</a>
+  </nav>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+
+    let dashboardData = [];
+    let stockMap = {};
+
+    async function initDashboard() {
+        await fetchData();
+        setInterval(fetchData, 5000); 
+    }
+
+    async function fetchData() {
+        try {
+            const [resTxn, resInv] = await Promise.all([
+                fetch('api.php?action=get_transactions'),
+                fetch('api.php?action=get_inventory')
+            ]);
+
+            const txns = await resTxn.json();
+            const inv = await resInv.json();
+            
+            dashboardData = txns; 
+
+            stockMap = {};
+            inv.forEach(i => {
+                stockMap[`${i.code}_${i.loc}`] = i.qty;
+            });
+
+            // Only update if not actively searching
+            if(document.activeElement.id !== 'dashSearch' && document.activeElement.id !== 'dashDate') {
+                filterDashboard();
+            }
+
+        } catch(e) { 
+            console.error("Connection Error", e); 
+        }
+    }
+
+    function filterDashboard() {
+        const textQuery = document.getElementById('dashSearch').value.toUpperCase().trim();
+        const dateQuery = document.getElementById('dashDate').value;
+        
+        let formattedDate = "";
+        if(dateQuery) {
+            const parts = dateQuery.split('-'); 
+            formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+        }
+
+        const filtered = dashboardData.filter(item => {
+            const code = (item.item_code || '').toUpperCase();
+            const loc = (item.loc || '').toUpperCase();
+            const wo = (item.work_order || '').toString();
+            const date = (item.timestamp || '');
+
+            const matchesText = code.includes(textQuery) || loc.includes(textQuery) || wo.includes(textQuery);
+            const matchesDate = formattedDate ? date.startsWith(formattedDate) : true;
+
+            return matchesText && matchesDate;
+        });
+
+        renderTable(filtered);
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('dash-body');
+        tbody.innerHTML = "";
+        
+        if (!data || data.length === 0) { 
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:30px;'>No activity found</td></tr>"; 
+            return; 
+        }
+
+        data.slice(0, 50).forEach(item => {
+            let currentStock = stockMap[`${item.item_code}_${item.loc}`] || "0";
+            let type = item.action_type || 'Unknown';
+            let badgeClass = type === 'Issue' ? 'act-Issue' : 'act-Entry';
+            let qtyClass = type === 'Issue' ? 'qty-minus' : 'qty-plus';
+            let sign = type === 'Issue' ? '-' : '+';
+            let wo = item.work_order || '-';
+            
+            tbody.innerHTML += `
+            <tr>
+                <td><span class="act-badge ${badgeClass}">${type}</span></td>
+                <td style="font-weight:700; color:#555;">${wo}</td>
+                <td style="font-weight:600; color:var(--primary);">${item.item_code}</td>
+                <td><b>${item.loc}</b></td>
+                <td class="${qtyClass}">${sign}${item.txn_qty}</td>
+                <td><span class="stock-badge">${currentStock}</span></td>
+                <td class="hide-mobile">${item.user || 'Admin'}</td>
+                <td style="font-size:11px; color:#888;">${item.timestamp}</td>
+            </tr>`;
+        });
+    }
+
+    // --- NEW: Fully updated export function mapping to get_all_transactions API ---
+    async function exportCSV() {
+        try {
+            // 1. Get current filter values from the dashboard UI
+            const textQuery = document.getElementById('dashSearch').value.trim();
+            const dateQuery = document.getElementById('dashDate').value;
+            
+            // 2. Build the API URL with parameters
+            let url = 'api.php?action=get_all_transactions';
+            if (textQuery) url += '&q=' + encodeURIComponent(textQuery);
+            if (dateQuery) url += '&date=' + encodeURIComponent(dateQuery);
+
+            // 3. Fetch the specifically filtered data
+            const response = await fetch(url);
+            const exportData = await response.json();
+
+            if (!exportData || exportData.length === 0) { 
+                alert("No data found for this date/search criteria to export."); 
+                return; 
+            }
+            
+            let csvContent = "data:text/csv;charset=utf-8,Type,WorkOrder,Code,Location,Txn Qty,User,Time\n";
+            
+            exportData.forEach(item => {
+                let row = [
+                    item.action_type, 
+                    item.work_order || '',
+                    item.item_code, 
+                    item.loc, 
+                    item.txn_qty, 
+                    item.user, 
+                    item.timestamp
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            // 4. Make the filename dynamic based on the date filter
+            let filename = "trims_activity_log";
+            if (dateQuery) filename += "_" + dateQuery; 
+            filename += ".csv";
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error("Export Error:", error);
+            alert("Failed to export filtered data.");
+        }
+    }
+  </script>
+</body>
+</html>

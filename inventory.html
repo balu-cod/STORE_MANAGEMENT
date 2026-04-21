@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | Unique Inventory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+        --primary: #0d6efd; 
+        --primary-hover: #0b5ed7; 
+        --bg: #f8f9fa; 
+        --white: #ffffff; 
+        --text: #212529; 
+        --text-muted: #6c757d;
+        --border: #eaedf1; 
+        --danger: #dc3545; 
+        --warning: #ffc107;
+    }
+    
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 80px; }
+    
+    .mobile-header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-title { color: var(--primary); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; text-align: center; }
+    .menu-icon { font-size: 20px; cursor: pointer; color: var(--text); width: 24px; }
+    
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 250px; background: white; padding: 20px; transform: translateX(-100%); transition: 0.3s; z-index: 200; border-right: 1px solid var(--border); }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 150; }
+    .overlay.active { display: block; }
+    .sidebar a { display: block; padding: 12px; color: #333; text-decoration: none; font-weight: 500; border-radius: 6px; margin-bottom: 5px; }
+    .sidebar a:hover { background: #f4f7fc; color: var(--primary); }
+
+    .main-content { max-width: 1000px; margin: 0 auto; padding: 15px; }
+    
+    .search-container { 
+        background: var(--white); padding: 12px; border-radius: 8px; border: 1px solid var(--border); 
+        display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;
+    }
+    .search-input { 
+        flex: 1; min-width: 120px; padding: 10px 14px; border: 1px solid var(--border); 
+        border-radius: 6px; font-size: 13px; outline: none; color: var(--text);
+    }
+    .search-input::placeholder { color: #adb5bd; }
+    select.search-input { cursor: pointer; background-color: #fff; }
+    
+    .search-btn, .btn-export, .btn-bulk-del {
+        border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .search-btn { background: var(--primary); color: white; }
+    .btn-export { background: #198754; color: white; }
+    .btn-bulk-del { background: var(--danger); color: white; display: none; }
+
+    .card { background: var(--white); border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th { text-align: left; padding: 14px 16px; background: var(--white); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: middle; color: var(--text); }
+    
+    .badge-qty { background: #f8f9fa; border: 1px solid #e9ecef; color: #212529; padding: 4px 10px; border-radius: 4px; font-weight: 700; display: inline-block; min-width: 30px; text-align: center; }
+    .badge-sap { background: #f3e8ff; color: #7e22ce; padding: 4px 10px; border-radius: 4px; font-weight: 700; display: inline-block; min-width: 30px; text-align: center; }
+    
+    .code-text { font-weight: 700; color: #000; }
+    .loc-text { color: var(--text-muted); }
+    .row-chk { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+    .update-dot { height: 8px; width: 8px; background-color: #198754; border-radius: 50%; position: absolute; right: 20px; opacity: 0; }
+  </style>
+</head>
+<body onload="initPage()">
+
+  <header class="mobile-header">
+    <div class="menu-icon" onclick="toggleMenu()">☰</div>
+    <div class="header-title">INVENTORY LIST</div>
+    <div style="width:24px; position:relative;">
+        <span id="invIndicator" class="update-dot"></span>
+    </div>
+  </header>
+
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+      <h2 style="color:var(--primary); padding-left:12px; margin-top:0;">TRIMS</h2>
+      <a href="index.html">Home</a>
+      <a href="qr_rack.html">Rack View</a>
+      <a href="import_stock.html">Import Physical Stock</a>
+      <a href="sap_import.html">Import SAP Stock</a>
+      <a href="inventory.html" style="background:#eef4ff; color:var(--primary);">Inventory List</a>
+  </aside>
+
+  <div class="main-content">
+      <div class="search-container">
+          <select id="locSelect" class="search-input" style="flex: 0.5;" onchange="handleLocChange()">
+              <option value="">All Racks</option>
+          </select>
+
+          <input type="text" id="search" class="search-input" placeholder="Search Code or Loc...">
+          <input type="number" id="qtySearch" class="search-input" placeholder="Min Qty" style="max-width: 80px;">
+          
+          <button class="search-btn" onclick="loadInventory()">Search</button>
+          
+          <button id="btnExportAll" class="btn-export" onclick="exportToCSV('all')">Export All</button>
+          
+          <button id="btnExportRack" class="btn-export" style="background:#0d6efd; display:none;" onclick="exportToCSV('rack')">Export Rack</button>
+          <button id="btnClearRack" class="btn-bulk-del" style="display:none;" onclick="clearSelectedRack()">Clear Rack</button>
+          
+          <button id="btnBulkDel" class="btn-bulk-del" onclick="bulkDeleteInventory()">Delete</button>
+      </div>
+
+      <div class="card">
+          <table>
+              <thead>
+                  <tr>
+                      <th style="width: 40px;"><input type="checkbox" id="selectAll" class="row-chk" onclick="toggleAll(this)"></th>
+                      <th>Code</th>
+                      <th>Loc</th>
+                      <th>Total Qty</th>
+                      <th>SAP Stock</th>
+                  </tr>
+              </thead>
+              <tbody id="invBody">
+                  <tr><td colspan="5" style="text-align:center; padding:30px; color:#6c757d;">Loading inventory...</td></tr>
+              </tbody>
+          </table>
+      </div>
+  </div>
+
+  <script>
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('active'); document.querySelector('.overlay').classList.toggle('active'); }
+    
+    let inventoryData = [];
+    let currentlyDisplayedData = [];
+
+    async function initPage() {
+        await loadLocations();
+        await loadInventory();
+        setInterval(() => loadInventory(true), 300000); 
+    }
+
+    // UPDATED: Now parses the first letter to display Racks
+    async function loadLocations() {
+        try {
+            const response = await fetch('api.php?action=get_rack_data');
+            const data = await response.json();
+            
+            // Extract the very first letter of each location and grab unique ones
+            const firstLetters = data.map(item => item.loc.charAt(0).toUpperCase());
+            const uniqueRacks = [...new Set(firstLetters)].filter(Boolean).sort();
+            
+            const select = document.getElementById('locSelect');
+            uniqueRacks.forEach(rackLetter => {
+                const option = document.createElement('option');
+                option.value = rackLetter;
+                option.textContent = "Rack " + rackLetter;
+                select.appendChild(option);
+            });
+        } catch(e) { console.error("Error loading locations:", e); }
+    }
+
+    function handleLocChange() {
+        const selectedLoc = document.getElementById('locSelect').value;
+        const btnExportRack = document.getElementById('btnExportRack');
+        const btnClearRack = document.getElementById('btnClearRack');
+        const btnExportAll = document.getElementById('btnExportAll');
+
+        if (selectedLoc) {
+            btnExportRack.style.display = 'inline-flex';
+            btnClearRack.style.display = 'inline-flex';
+            btnExportAll.style.display = 'none';
+        } else {
+            btnExportRack.style.display = 'none';
+            btnClearRack.style.display = 'none';
+            btnExportAll.style.display = 'inline-flex';
+        }
+        filterAndRenderTable();
+    }
+
+    async function loadInventory(isAuto = false) {
+        try {
+            const q = document.getElementById('search').value.trim();
+            const qty = document.getElementById('qtySearch').value.trim();
+            
+            const response = await fetch(`api.php?action=get_unique_inventory&q=${encodeURIComponent(q)}&qty=${encodeURIComponent(qty)}`);
+            inventoryData = await response.json();
+            
+            filterAndRenderTable();
+            
+            if(isAuto) { const dot = document.getElementById('invIndicator'); dot.style.opacity = "1"; setTimeout(() => dot.style.opacity = "0", 2000); }
+        } catch(e) { console.error(e); }
+    }
+
+    // UPDATED: Now checks if the location string STARTS WITH the selected letter
+    function filterAndRenderTable() {
+        const selectedLoc = document.getElementById('locSelect').value;
+        
+        if (selectedLoc) {
+            currentlyDisplayedData = inventoryData.filter(item => {
+                const locsArray = item.locations ? item.locations.split(', ') : [];
+                // Check if any location inside this item's array starts with the selected letter
+                return locsArray.some(loc => loc.charAt(0).toUpperCase() === selectedLoc);
+            });
+        } else {
+            currentlyDisplayedData = inventoryData;
+        }
+        renderTable(currentlyDisplayedData);
+    }
+
+    function toggleAll(source) {
+        document.querySelectorAll('.row-chk.item-chk').forEach(cb => cb.checked = source.checked);
+        toggleBulkBtn();
+    }
+
+    function toggleBulkBtn() {
+        const count = document.querySelectorAll('.row-chk.item-chk:checked').length;
+        const btn = document.getElementById('btnBulkDel');
+        btn.style.display = count > 0 ? 'inline-flex' : 'none';
+        btn.innerText = `Delete (${count})`;
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('invBody');
+        tbody.innerHTML = "";
+        
+        document.getElementById('selectAll').checked = false;
+        toggleBulkBtn();
+
+        if(data.length === 0) { tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:30px; color:#6c757d;'>No items found</td></tr>"; return; }
+
+        data.forEach(item => {
+            let filteredLocs = (item.locations ? item.locations.split(', ') : []);
+            let locText = filteredLocs.join(', ');
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td><input type="checkbox" class="row-chk item-chk" value="${item.code}" onclick="toggleBulkBtn()"></td>
+                    <td class="code-text">${item.code}</td>
+                    <td class="loc-text">${locText}</td>
+                    <td><span class="badge-qty">${item.total_qty}</span></td>
+                    <td><span class="badge-sap">${item.sap_stock || 0}</span></td>
+                </tr>`;
+        });
+    }
+
+    // UPDATED: Calls the new clear_rack API
+    async function clearSelectedRack() {
+        const selectedLoc = document.getElementById('locSelect').value;
+        if (!selectedLoc) return;
+
+        if(!confirm(`⚠️ DANGER: Are you sure you want to completely clear all inventory from Rack '${selectedLoc}'? This deletes all bins starting with ${selectedLoc}.`)) return;
+
+        const btn = document.getElementById('btnClearRack');
+        btn.innerText = "Clearing..."; btn.disabled = true;
+
+        try {
+            const response = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clear_rack', rack: selectedLoc, user: 'Admin' })
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                alert(`Rack ${selectedLoc} cleared successfully!`);
+                loadInventory(); 
+            } else {
+                alert("Error: " + result.message);
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Network Error.");
+        }
+        btn.innerText = "Clear Rack"; btn.disabled = false;
+    }
+
+    async function bulkDeleteInventory() {
+        const selected = Array.from(document.querySelectorAll('.row-chk.item-chk:checked')).map(cb => cb.value);
+        if(!confirm(`⚠️ Delete all records for ${selected.length} materials? This will remove them completely from the database.`)) return;
+        
+        const btn = document.getElementById('btnBulkDel');
+        btn.innerText = "Deleting...";
+        btn.disabled = true;
+
+        for(let code of selected) {
+            await fetch('api.php', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_by_code', code: code, user: 'Admin' }) 
+            });
+        }
+        
+        document.getElementById('selectAll').checked = false;
+        btn.disabled = false;
+        toggleBulkBtn();
+        loadInventory();
+    }
+
+    function exportToCSV(type) {
+        const dataToExport = (type === 'rack') ? currentlyDisplayedData : inventoryData;
+
+        if (dataToExport.length === 0) {
+            alert("No data available to export.");
+            return;
+        }
+
+        let csvContent = "Code,Loc,Total Qty,SAP Stock\n";
+
+        dataToExport.forEach(item => {
+            let code = `"${item.code || ''}"`;
+            let locs = `"${item.locations || ''}"`;
+            let qty = item.total_qty || 0;
+            let sap = item.sap_stock || 0;
+
+            csvContent += `${code},${locs},${qty},${sap}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        const dateStr = new Date().toISOString().slice(0, 10);
+        let prefix = (type === 'rack') ? document.getElementById('locSelect').value.replace(/\s+/g, '_') + "_Rack" : "Inventory";
+        link.setAttribute("download", `${prefix}_Export_${dateStr}.csv`);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>

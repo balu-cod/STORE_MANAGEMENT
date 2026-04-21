@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rack View | Stock Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0f62fe; --bg: #f4f7fc; --white: #fff; --text: #161616; --border: #e0e0e0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 80px; }
+    
+    .mobile-header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .main-content { max-width: 900px; margin: 0 auto; padding: 15px; }
+    
+    .control-panel { background: white; padding: 10px; border-radius: 12px; border: 1px solid var(--border); display: flex; gap: 8px; margin-bottom: 15px; }
+    .search-input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+    .btn { padding: 8px 12px; border-radius: 6px; border: none; font-weight: 700; color: white; cursor: pointer; text-decoration: none; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+    
+    .card { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th { text-align: left; padding: 12px; background: #f9f9f9; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+    
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-entry { background: #e6f7ff; color: #0043ce; }
+    .badge-issue { background: #fff1f1; color: #da1e28; }
+    
+    /* Field Styles */
+    .live-qty { font-weight: 800; color: #333; }
+    .stock-val { font-weight: 800; color: #0f62fe; font-size: 14px; }
+    
+    .action-group { display: flex; gap: 5px; }
+    .btn-icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; text-decoration: none; font-weight: bold; }
+    .btn-add { background: #e6f7ff; color: #0043ce; }
+    .btn-sub { background: #fff1f1; color: #da1e28; }
+
+    .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: 250px; background: white; padding: 20px; transform: translateX(-100%); transition: 0.3s; z-index: 200; border-right: 1px solid #ddd; }
+    .sidebar.active { transform: translateX(0); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; z-index: 150; }
+    .overlay.active { display: block; }
+    
+    /* Update Dot Animation */
+    .update-dot { height: 8px; width: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-left: 8px; opacity: 0; transition: opacity 0.5s; }
+  </style>
+</head>
+<body onload="startAutoUpdate()">
+
+  <header class="mobile-header">
+    <div onclick="toggleMenu()" style="font-size:24px; cursor:pointer;">☰</div>
+    <div style="display:flex; align-items:center;">
+        <span style="font-weight:700; font-size:18px;">RACK VIEW</span>
+        <span id="liveIndicator" class="update-dot" title="Data Updated just now"></span>
+    </div>
+    <div></div>
+  </header>
+
+  <div class="overlay" onclick="toggleMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+      <h2 style="color:#0f62fe;">TRIMS</h2>
+      <a href="index.html" style="display:block; padding:10px; color:#333; text-decoration:none;">Home</a>
+      <a href="sap_import.html" style="display:block; padding:10px; color:#0f62fe; font-weight:bold;">Import SAP Stock</a>
+      <a href="inventory.html" style="display:block; padding:10px; color:#333; text-decoration:none;">Inventory List</a>
+  </aside>
+
+  <div class="main-content">
+    <div class="control-panel">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Code or Location...">
+        <button onclick="filterTable()" class="btn" style="background:var(--primary);">Search</button>
+        <a href="entry.html" class="btn" style="background:#198038;">+ Entry</a>
+    </div>
+
+    <div style="margin-bottom:10px; font-weight:800; font-size:18px;" id="pageTitle">Loading...</div>
+
+    <div class="card" style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Code</th>
+                    <th>Location</th>
+                    <th>Act Qty</th> <th>SAP Stock</th> <th>Manage</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="6" style="text-align:center; padding:20px;">Loading data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+  </div>
+
+  <script>
+    function toggleMenu() { 
+        document.getElementById('sidebar').classList.toggle('active'); 
+        document.querySelector('.overlay').classList.toggle('active'); 
+    }
+
+    let allInventory = []; // Stores the entire database
+    let refreshTimer = null;
+
+    // Listen for the "Enter" key on the search input to trigger search
+    document.getElementById("searchInput").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            filterTable();
+        }
+    });
+
+    // --- AUTO UPDATE LOGIC (5 MINUTES) ---
+    function startAutoUpdate() {
+        initPage(); // Load immediately
+        
+        // Set Interval for 5 Minutes (300,000 ms)
+        refreshTimer = setInterval(() => {
+            console.log("Refreshing Data...");
+            initPage(true); 
+        }, 300000); 
+    }
+
+    async function initPage(isAuto = false) {
+        const urlParams = new URLSearchParams(window.location.search);
+        let seriesFilter = urlParams.get('series') || "";
+
+        if(seriesFilter) document.getElementById('pageTitle').innerText = "RACK " + seriesFilter;
+        else document.getElementById('pageTitle').innerText = "RACK (All)";
+
+        try {
+            // Only fetch from the inventory database
+            const resInv = await fetch('api.php?action=get_inventory');
+            allInventory = await resInv.json();
+
+            filterTable(seriesFilter);
+
+            // Flash Green Dot
+            if(isAuto) {
+                const dot = document.getElementById('liveIndicator');
+                dot.style.opacity = "1";
+                setTimeout(() => dot.style.opacity = "0", 2000);
+            }
+
+        } catch(e) { console.error("Update failed", e); }
+    }
+
+    function filterTable(seriesFilter = "") {
+        const urlParams = new URLSearchParams(window.location.search);
+        if(seriesFilter === "") seriesFilter = urlParams.get('series') || "";
+
+        const query = document.getElementById('searchInput').value.toUpperCase().trim();
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = "";
+        
+        // Filter directly against the inventory database
+        let displayData = allInventory.filter(item => {
+            let loc = (item.loc || "").toUpperCase();
+            let code = (item.code || "").toUpperCase();
+            
+            let matchesSeries = seriesFilter === "" || loc.startsWith(seriesFilter);
+            let matchesQuery = query === "" || code.includes(query) || loc.includes(query);
+            
+            return matchesSeries && matchesQuery;
+        });
+
+        if(displayData.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No records found</td></tr>";
+            return;
+        }
+
+        displayData.forEach(item => {
+            let actionType = item.last_activity || 'Stock';
+            let badgeClass = actionType === 'Issue' ? 'badge-issue' : 'badge-entry';
+
+            tbody.innerHTML += `
+            <tr>
+                <td><span class="badge ${badgeClass}">${actionType}</span></td>
+                <td><b>${item.code}</b></td>
+                <td><span style="background:#eef4ff; color:#0f62fe; padding:4px 6px; border-radius:4px; font-weight:bold;">${item.loc}</span></td>
+                <td><span class="live-qty">${item.qty}</span></td>
+                <td><span class="stock-val">${item.excel_stock || 0}</span></td>
+                <td>
+                    <div class="action-group">
+                        <a href="entry.html?code=${item.code}&loc=${item.loc}" class="btn-icon btn-add">+</a>
+                        <a href="issue.html?code=${item.code}&loc=${item.loc}" class="btn-icon btn-sub">-</a>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+  </script>
+</body>
+</html>

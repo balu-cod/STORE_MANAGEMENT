@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trims | SAP Analysis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #0d6efd; --bg: #f8f9fa; --white: #ffffff; --text: #212529; --text-muted: #6c757d; --border: #eaedf1; --success: #198754; --danger: #dc3545; --warning: #fd7e14; --secondary: #6c757d; }
+    body { background: var(--bg); color: var(--text); margin: 0; font-family: 'Inter', sans-serif; padding-bottom: 80px; }
+    
+    .mobile-header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-title { color: var(--primary); font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; flex: 1; text-align: center; }
+    
+    .main-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .back-btn { background: #e9ecef; color: #495057; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none;}
+    .back-btn:hover { background: #ced4da; color: #212529; }
+    
+    /* Action Buttons (Analyze & Export) */
+    .action-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn-analyze { background: var(--success); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; flex: 2; box-shadow: 0 4px 6px rgba(25, 135, 84, 0.2); transition: background 0.2s; }
+    .btn-analyze:hover { background: #157347; }
+    
+    .btn-export { background: #495057; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(73, 80, 87, 0.2); transition: background 0.2s; flex: 1; display: none; }
+    .btn-export:hover { background: #343a40; }
+    
+    /* Search Bar Styling */
+    .search-container { display: flex; gap: 10px; margin-bottom: 20px; }
+    .search-input { flex: 1; padding: 12px 15px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: 'Inter', sans-serif; }
+    .search-input:focus { border-color: var(--primary); }
+    .search-btn { background: var(--primary); color: white; border: none; padding: 0 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);}
+    .search-btn:hover { background: #0b5ed7; }
+
+    /* Filter Buttons */
+    .filter-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .filter-btn { flex: 1; min-width: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 5px; border-radius: 8px; border: 2px solid #dee2e6; background: var(--white); cursor: pointer; transition: all 0.2s; }
+    .filter-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+    .filter-btn span:first-child { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; text-align: center;}
+    .filter-btn .badge-count { font-size: 22px; font-weight: 800; }
+
+    .filter-btn.total .badge-count { color: var(--primary); }
+    .filter-btn.total.active { background: #eef4ff; border-color: var(--primary); }
+    .filter-btn.match .badge-count { color: var(--success); }
+    .filter-btn.match.active { background: #d1e7dd; border-color: var(--success); }
+    .filter-btn.shortage .badge-count { color: var(--danger); }
+    .filter-btn.shortage.active { background: #f8d7da; border-color: var(--danger); }
+    .filter-btn.excess .badge-count { color: var(--warning); }
+    .filter-btn.excess.active { background: #fff3cd; border-color: var(--warning); }
+    
+    /* New Zero SAP filter styling */
+    .filter-btn.zerosap .badge-count { color: var(--secondary); }
+    .filter-btn.zerosap.active { background: #e2e3e5; border-color: var(--secondary); }
+
+    /* Table */
+    .card { background: var(--white); border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; margin-bottom: 20px;}
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th { text-align: left; padding: 14px 16px; background: #f8f9fa; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; font-weight: 600;}
+    
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .bg-match { background: #d1e7dd; color: #0f5132; }
+    .bg-shortage { background: #f8d7da; color: #842029; }
+    .bg-excess { background: #fff3cd; color: #664d03; }
+    .bg-zerosap { background: #e2e3e5; color: #41464b; } /* New Badge Style */
+    
+    .diff-negative { color: var(--danger); font-weight: 800; }
+    .diff-positive { color: var(--warning); font-weight: 800; }
+    .diff-neutral { color: var(--success); font-weight: 800; }
+    
+    /* Row Count Styling */
+    .row-count-display { margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--text-muted); text-align: right; }
+  </style>
+</head>
+<body>
+
+  <header class="mobile-header">
+    <a href="monitoring.html" style="text-decoration:none; color:var(--text); font-size:20px;">←</a>
+    <div class="header-title">SAP ANALYSIS</div>
+    <div style="width:24px;"></div>
+  </header>
+
+  <div class="main-content">
+      <a href="monitoring.html" class="back-btn">← Back to Menu</a>
+      
+      <div class="action-group">
+          <button id="actionBtnSap" class="btn-analyze" onclick="analyzeSAPData()">
+              Load SAP Data Analysis
+          </button>
+          <button id="exportBtn" class="btn-export" onclick="exportDataToCSV()">
+              Export CSV
+          </button>
+      </div>
+
+      <div class="search-container" id="searchBox" style="display:none;">
+          <input type="text" id="searchInput" class="search-input" placeholder="Search by Material Code or Location..." onkeyup="if(event.key === 'Enter') applyFilters()">
+          <button class="search-btn" onclick="applyFilters()">Search</button>
+      </div>
+
+      <div class="filter-group" id="statsPanel" style="display:none;">
+          <button class="filter-btn total active" id="filter-ALL" onclick="setFilter('ALL')">
+              <span>Total Codes</span><span class="badge-count" id="count-total">0</span>
+          </button>
+          <button class="filter-btn match" id="filter-MATCH" onclick="setFilter('MATCH')">
+              <span>Match (±100)</span><span class="badge-count" id="count-match">0</span>
+          </button>
+          <button class="filter-btn shortage" id="filter-SHORTAGE" onclick="setFilter('SHORTAGE')">
+              <span>Shortage</span><span class="badge-count" id="count-shortage">0</span>
+          </button>
+          <button class="filter-btn excess" id="filter-EXCESS" onclick="setFilter('EXCESS')">
+              <span>Excess</span><span class="badge-count" id="count-excess">0</span>
+          </button>
+          <button class="filter-btn zerosap" id="filter-ZERO_SAP" onclick="setFilter('ZERO_SAP')">
+              <span>0 SAP Stock</span><span class="badge-count" id="count-zerosap">0</span>
+          </button>
+      </div>
+
+      <div id="rowCountDisplay" class="row-count-display" style="display:none;"></div>
+
+      <div class="card" id="tableCard" style="display:none;">
+          <table>
+              <thead>
+                  <tr>
+                      <th>Material Code</th>
+                      <th>Location</th>
+                      <th>Physical Stock</th>
+                      <th>SAP Stock</th>
+                      <th>Difference</th>
+                      <th>Status</th>
+                  </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+          </table>
+      </div>
+  </div>
+
+  <script>
+    async function safeFetchJSON(url) {
+        const response = await fetch(url);
+        const text = await response.text();
+        try { return JSON.parse(text); } 
+        catch(e) {
+            let cleanErr = text.replace(/<[^>]*>?/gm, '').trim();
+            alert("Database Error:\n" + (cleanErr.substring(0, 150) || "Server error"));
+            throw new Error("Invalid response");
+        }
+    }
+
+    let globalAnalysisData = [];
+    let currentFilterStatus = 'ALL'; 
+
+    async function analyzeSAPData() {
+        const btn = document.getElementById('actionBtnSap');
+        btn.innerText = "Analyzing Database...";
+        btn.disabled = true;
+
+        try {
+            const data = await safeFetchJSON('api.php?action=get_unique_inventory');
+
+            let matchCount = 0; let shortageCount = 0; let excessCount = 0; let zeroSapCount = 0;
+            globalAnalysisData = [];
+
+            // Process data and apply physical stock filter
+            data.forEach(item => {
+                let phy = parseInt(item.total_qty) || 0;
+                
+                // ONLY INCLUDE ITEMS WITH PHYSICAL STOCK GREATER THAN OR EQUAL TO 1
+                if (phy >= 1) {
+                    let locs = item.locations || 'UNASSIGNED';
+                    let sap = parseInt(item.sap_stock) || 0;
+                    let diff = phy - sap; 
+                    let absDiff = Math.abs(diff);
+                    let status = ''; let statusClass = '';
+
+                    // Prioritize 0 SAP stock check first
+                    if (sap === 0) { 
+                        status = 'ZERO_SAP'; statusClass = 'bg-zerosap'; zeroSapCount++; 
+                    } 
+                    else if (absDiff <= 100) { 
+                        status = 'MATCH'; statusClass = 'bg-match'; matchCount++; 
+                    } 
+                    else if (sap > phy) { 
+                        status = 'SHORTAGE'; statusClass = 'bg-shortage'; shortageCount++; 
+                    } 
+                    else if (phy > sap) { 
+                        status = 'EXCESS'; statusClass = 'bg-excess'; excessCount++; 
+                    }
+
+                    // For display purposes, format ZERO_SAP to look cleaner in the table
+                    let displayStatus = status === 'ZERO_SAP' ? '0 SAP STOCK' : status;
+
+                    globalAnalysisData.push({ ...item, locs, phy, sap, diff, status, displayStatus, statusClass });
+                }
+            });
+
+            // Update Badges
+            document.getElementById('count-total').innerText = globalAnalysisData.length;
+            document.getElementById('count-match').innerText = matchCount;
+            document.getElementById('count-shortage').innerText = shortageCount;
+            document.getElementById('count-excess').innerText = excessCount;
+            document.getElementById('count-zerosap').innerText = zeroSapCount;
+
+            // Unhide UI elements including the new Export button
+            document.getElementById('searchBox').style.display = 'flex';
+            document.getElementById('statsPanel').style.display = 'flex';
+            document.getElementById('rowCountDisplay').style.display = 'block';
+            document.getElementById('tableCard').style.display = 'block';
+            document.getElementById('exportBtn').style.display = 'block';
+            
+            // Apply initial filtering
+            setFilter('ALL'); 
+
+            btn.innerText = "Refresh Data";
+            btn.disabled = false;
+        } catch(e) { btn.innerText = "Error! Try Again"; btn.disabled = false; }
+    }
+
+    function setFilter(filterStatus) {
+        currentFilterStatus = filterStatus;
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('filter-' + filterStatus).classList.add('active');
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const tbody = document.getElementById('tableBody');
+        const rowCountElement = document.getElementById('rowCountDisplay');
+        tbody.innerHTML = "";
+
+        const filteredData = globalAnalysisData.filter(item => {
+            let statusMatch = (currentFilterStatus === 'ALL') || (item.status === currentFilterStatus);
+            
+            let searchMatch = true;
+            if (query !== "") {
+                let codeStr = (item.code || "").toLowerCase();
+                let locStr = (item.locs || "").toLowerCase();
+                searchMatch = codeStr.includes(query) || locStr.includes(query);
+            }
+
+            return statusMatch && searchMatch;
+        });
+
+        // Update Row Count Display
+        rowCountElement.innerText = `Showing ${filteredData.length} records`;
+
+        if(filteredData.length === 0) { 
+            tbody.innerHTML = `<tr><td colspan='6' style='text-align:center; padding:30px; color:#6c757d;'>No records found matching your search.</td></tr>`; 
+            return; 
+        }
+
+        filteredData.forEach(item => {
+            let diffClass = 'diff-neutral';
+            let diffDisplay = item.diff;
+            if (item.diff < -100) diffClass = 'diff-negative';
+            else if (item.diff > 100) { diffClass = 'diff-positive'; diffDisplay = '+' + item.diff; }
+            else diffDisplay = (item.diff > 0 ? '+' : '') + item.diff;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight:800;">${item.code}</td>
+                    <td style="color:#6c757d; font-size:12px;">${item.locs}</td>
+                    <td>${item.phy}</td>
+                    <td style="color:#0d6efd; font-weight:800;">${item.sap}</td>
+                    <td class="${diffClass}">${diffDisplay}</td>
+                    <td><span class="badge ${item.statusClass}">${item.displayStatus}</span></td>
+                </tr>`;
+        });
+    }
+
+    function exportDataToCSV() {
+        if (!globalAnalysisData || globalAnalysisData.length === 0) {
+            alert("No data available to export. Please analyze the data first.");
+            return;
+        }
+
+        let csvContent = "";
+
+        // Helper function to build formatted CSV sections
+        const buildSection = (statusFilter, sectionHeader) => {
+            const filtered = globalAnalysisData.filter(item => item.status === statusFilter);
+            if (filtered.length > 0) {
+                csvContent += `${sectionHeader}\n`;
+                csvContent += "Material Code,Location,Physical Stock,SAP Stock,Difference,Status\n";
+                
+                filtered.forEach(item => {
+                    // Wrap locations in quotes to prevent commas from breaking the CSV layout
+                    let safeLocs = `"${item.locs || ''}"`;
+                    let row = `${item.code},${safeLocs},${item.phy},${item.sap},${item.diff},${item.displayStatus}`;
+                    csvContent += row + "\n";
+                });
+                csvContent += "\n"; // Blank line separator between tables
+            }
+        };
+
+        // Construct the file content with headings in a logical order
+        buildSection('MATCH', '--- MATCHING INVENTORY (±100) ---');
+        buildSection('SHORTAGE', '--- SHORTAGE (SAP > Physical) ---');
+        buildSection('EXCESS', '--- EXCESS (Physical > SAP) ---');
+        buildSection('ZERO_SAP', '--- 0 SAP STOCK (Not in SAP / Empty) ---');
+
+        // Create a Blob and trigger the download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        // Create a filename with today's date
+        const dateStr = new Date().toISOString().split('T')[0];
+        link.setAttribute("download", `SAP_Analysis_${dateStr}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
